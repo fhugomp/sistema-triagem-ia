@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "sistema-triagem-ia"
+version = "0.1.0"
+description = "Sistema Inteligente de Triagem com Rede Bayesiana e Algoritmo A*"
+authors = ["Hugo Mendes <fhugomp@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pgmpy = "^0.1.25"
+networkx = "^3.2.1"
+pandas = "^2.2.0"
+numpy = "^1.26.0"
+streamlit = "^1.31.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+ruff = "^0.2.0"
+mypy = "^1.8.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
