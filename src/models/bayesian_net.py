@@ -2,6 +2,7 @@ from typing import Dict, cast
 from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD, DiscreteFactor
 from pgmpy.inference import VariableElimination
+from src import config
 
 
 class SistemaTriagemBayesiana:
@@ -15,6 +16,7 @@ class SistemaTriagemBayesiana:
         self.model = BayesianNetwork(
             [
                 ("IdadeAvancada", "Gravidade"),
+                ("DoencaCronica", "Gravidade"),
                 ("Gravidade", "SaturacaoO2"),
                 ("Gravidade", "FrequenciaCardiaca"),
                 ("Gravidade", "NivelDor"),
@@ -26,6 +28,7 @@ class SistemaTriagemBayesiana:
         # Modelo validado estritamente pelo pgmpy
         self.model.check_model()
         self.inferencia = VariableElimination(self.model)
+        self._cache_inferencia: Dict[str, Dict[str, float]] = {}
 
     def _construir_cpts(self) -> None:
         """Define as tabelas de probabilidade condicional (CPTs) para cada variável."""
@@ -36,19 +39,27 @@ class SistemaTriagemBayesiana:
             state_names={"IdadeAvancada": ["Falso", "Verdadeiro"]},
         )
 
+        cpd_doenca_cronica = TabularCPD(
+            variable="DoencaCronica",
+            variable_card=2,
+            values=[[0.7], [0.3]],
+            state_names={"DoencaCronica": ["Falso", "Verdadeiro"]},
+        )
+
         cpd_gravidade = TabularCPD(
             variable="Gravidade",
             variable_card=3,
             values=[
-                [0.6, 0.2],  # Probabilidade de Gravidade = baixa
-                [0.3, 0.4],  # Probabilidade de Gravidade = média
-                [0.1, 0.4],  # Probabilidade de Gravidade = alta
+                [0.80, 0.50, 0.40, 0.10],  # Probabilidade de Gravidade = baixa
+                [0.15, 0.30, 0.40, 0.30],  # Probabilidade de Gravidade = média
+                [0.05, 0.20, 0.20, 0.60],  # Probabilidade de Gravidade = alta
             ],
-            evidence=["IdadeAvancada"],
-            evidence_card=[2],
+            evidence=["IdadeAvancada", "DoencaCronica"],
+            evidence_card=[2, 2],
             state_names={
-                "Gravidade": ["baixa", "média", "alta"],
+                "Gravidade": config.ESTADOS_GRAVIDADE,
                 "IdadeAvancada": ["Falso", "Verdadeiro"],
+                "DoencaCronica": ["Falso", "Verdadeiro"],
             },
         )
 
@@ -63,7 +74,7 @@ class SistemaTriagemBayesiana:
             evidence_card=[3],
             state_names={
                 "SaturacaoO2": ["Normal", "Baixa"],
-                "Gravidade": ["baixa", "média", "alta"],
+                "Gravidade": config.ESTADOS_GRAVIDADE,
             },
         )
 
@@ -78,7 +89,7 @@ class SistemaTriagemBayesiana:
             evidence_card=[3],
             state_names={
                 "FrequenciaCardiaca": ["Normal", "Alta"],
-                "Gravidade": ["baixa", "média", "alta"],
+                "Gravidade": config.ESTADOS_GRAVIDADE,
             },
         )
 
@@ -93,7 +104,7 @@ class SistemaTriagemBayesiana:
             evidence_card=[3],
             state_names={
                 "NivelDor": ["Leve", "Intensa"],
-                "Gravidade": ["baixa", "média", "alta"],
+                "Gravidade": config.ESTADOS_GRAVIDADE,
             },
         )
 
@@ -108,12 +119,13 @@ class SistemaTriagemBayesiana:
             evidence_card=[3],
             state_names={
                 "Febre": ["Ausente", "Presente"],
-                "Gravidade": ["baixa", "média", "alta"],
+                "Gravidade": config.ESTADOS_GRAVIDADE,
             },
         )
 
         self.model.add_cpds(
             cpd_idade,
+            cpd_doenca_cronica,
             cpd_gravidade,
             cpd_saturacao,
             cpd_frequencia,
@@ -126,18 +138,23 @@ class SistemaTriagemBayesiana:
     ) -> Dict[str, float]:
         """
         Calcula a probabilidade de cada nível de gravidade.
-        :param evidencias: Dicionário com as evidências observadas, onde as chaves são os nomes das variáveis
-                          e os valores são os estados observados (ex: {"IdadeAvancada": "Verdadeiro", "Febre": "Presente"}).
-        :return: Dicionário com as probabilidades de cada nível de gravidade (ex: {"baixa": 0.2, "média": 0.5, "alta": 0.3}).
         """
+        chave_cache = "_".join(f"{k}-{v}" for k, v in sorted(evidencias.items()))
+
+        if chave_cache in self._cache_inferencia:
+            return self._cache_inferencia[chave_cache]
 
         resultado = cast(
             DiscreteFactor,
             self.inferencia.query(variables=["Gravidade"], evidence=evidencias),
         )
 
-        return {
-            "baixa": float(resultado.values[0]),
-            "média": float(resultado.values[1]),
-            "alta": float(resultado.values[2]),
+        # Utilizando os estados do config para blindar o dicionário de saída
+        probs = {
+            config.ESTADOS_GRAVIDADE[0]: float(resultado.values[0]),
+            config.ESTADOS_GRAVIDADE[1]: float(resultado.values[1]),
+            config.ESTADOS_GRAVIDADE[2]: float(resultado.values[2]),
         }
+
+        self._cache_inferencia[chave_cache] = probs
+        return probs

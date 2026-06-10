@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Tuple
+from src import config
 
 
 class BaselinesTriagem:
@@ -6,7 +7,9 @@ class BaselinesTriagem:
     Classe para simular diferentes estratégias de triagem de pacientes.
     """
 
-    def __init__(self, tempo_atendimento_minutos: int = 15):
+    def __init__(
+        self, tempo_atendimento_minutos: int = config.TEMPO_ATENDIMENTO_MINUTOS
+    ):
         self.tempo_atendimento_minutos = tempo_atendimento_minutos
 
     def _calcular_risco_total(

@@ -1,5 +1,6 @@
 import heapq
 from typing import List, Tuple, Dict, Any
+from src import config
 
 
 class NoFila:
@@ -20,15 +21,14 @@ class NoFila:
         self.tempo_atual = tempo_atual
 
         self.heuristica_h = self.calcular_heuristica()
-
         self.custo_f = self.risco_acumulado_g + self.heuristica_h
 
     def calcular_heuristica(self) -> float:
         """
-        Método que calcula a heurística (h) para o nó atual, estimando o risco total futuro com base nos pacientes restantes e seus tempos de espera.
+        Calcula a heurística (h) para o nó atual.
 
-        Returns:
-            float: A heurística (h) para o nó atual.
+        Foi utilizada uma heurística baseada na soma dos riscos atuais dos pacientes
+        restantes, conforme sugerido pelo escopo do edital.
         """
         risco_h = 0.0
         for p in self.pacientes_restantes:
@@ -38,69 +38,94 @@ class NoFila:
 
     def __lt__(self, other: "NoFila") -> bool:
         """
-        Método de comparação para a fila de prioridade, baseado no custo f (g + h). Nós com menor custo f têm maior prioridade.
-
-        Args:
-            other (NoFila): Outro nó para comparação.
-
-        Returns:
-            bool: True se o nó atual tiver menor custo f que o nó other, False caso contrário.
+        Método de comparação para a fila de prioridade, baseado no custo f (g + h).
         """
         return self.custo_f < other.custo_f
 
 
 class OtimizadorTriagemAStar:
     """
-    Implementa o algoritmo A* para otimizar a ordem de atendimento dos pacientes na triagem, minimizando o risco global.
+    Implementa o algoritmo A* para otimizar a ordem de atendimento dos pacientes na triagem.
     """
 
-    def __init__(self, tempo_atendimento_minutos: int = 15):
+    def __init__(
+        self, tempo_atendimento_minutos: int = config.TEMPO_ATENDIMENTO_MINUTOS
+    ):
         self.tempo_atendimento = tempo_atendimento_minutos
 
     def calcular_risco_paciente(self, prob_alta: float, tempo_espera: int) -> float:
+        """
+        Calcula o risco individual de deterioração clínica.
+        """
         return prob_alta * tempo_espera
 
-    def otimizar_fila(self, pacientes: List[Dict[str, Any]]) -> Tuple[List[int], float]:
+    def otimizar_fila(
+        self,
+        pacientes: List[Dict[str, Any]],
+        tamanho_janela: int = config.TAMANHO_JANELA_A_STAR,
+    ) -> Tuple[List[int], float]:
         """
-        Executa o A* usando uma Priority Queue (heapq nativo) para encontrar
-        a ordem ideal de atendimento que minimiza o risco global.
-        Retorna a lista ordenada de IDs e o risco total acumulado final.
+        Executa o algoritmo A* através de um particionamento da fila (Sliding Window)
+        para contornar a explosão combinatória $O(N!)$.
+
+        ATENÇÃO ACADÊMICA:
+        Esta abordagem sacrifica a garantia matemática do ótimo global. O algoritmo
+        encontra uma ordem localmente ótima dentro de cada lote.
+
+        Como a base sintética não possui timestamp explícito de chegada, o tempo de
+        espera inicial foi utilizado como aproximação da ordem FIFO para a pré-ordenação
+        dos lotes, garantindo que pacientes antigos sejam processados primeiro.
         """
-        # Nó inicial: todos os pacientes aguardam atendimento, tempo = 0
-        no_inicial = NoFila(
-            pacientes_restantes=pacientes,
-            risco_acumulado_g=0.0,
-            ordem_atendimento=[],
-            tempo_atual=0,
+        pacientes_ordenados = sorted(
+            pacientes, key=lambda x: x["TempoEspera_Inicial_Minutos"], reverse=True
         )
 
-        fronteira: List[NoFila] = []
-        heapq.heappush(fronteira, no_inicial)
+        ordem_final_global: List[int] = []
+        risco_total_global = 0.0
+        tempo_acumulado = 0
 
-        while fronteira:
-            no_atual = heapq.heappop(fronteira)
+        for i in range(0, len(pacientes_ordenados), tamanho_janela):
+            # Criação de cópias defensivas para eliminar efeitos colaterais
+            lote = [p.copy() for p in pacientes_ordenados[i : i + tamanho_janela]]
 
-            if not no_atual.pacientes_restantes:
-                return no_atual.ordem_atendimento, no_atual.risco_acumulado_g
+            for p in lote:
+                p["TempoEspera_Inicial_Minutos"] += tempo_acumulado
 
-            for i, paciente in enumerate(no_atual.pacientes_restantes):
-                tempo_espera_real = (
-                    no_atual.tempo_atual + paciente["TempoEspera_Inicial_Minutos"]
-                )
-                risco_atendimento = self.calcular_risco_paciente(
-                    paciente["Probabilidade_Alta"], tempo_espera_real
-                )
+            no_inicial = NoFila(
+                lote,
+                risco_acumulado_g=0.0,
+                ordem_atendimento=[],
+                tempo_atual=tempo_acumulado,
+            )
+            fronteira: List[NoFila] = []
+            heapq.heappush(fronteira, no_inicial)
 
-                novo_risco_g = no_atual.risco_acumulado_g + risco_atendimento
+            while fronteira:
+                no_atual = heapq.heappop(fronteira)
 
-                novos_restantes = no_atual.pacientes_restantes.copy()
-                novos_restantes.pop(i)
+                if not no_atual.pacientes_restantes:
+                    ordem_final_global.extend(no_atual.ordem_atendimento)
+                    risco_total_global += no_atual.risco_acumulado_g
+                    tempo_acumulado = no_atual.tempo_atual
+                    break
 
-                nova_ordem = no_atual.ordem_atendimento + [paciente["ID_Paciente"]]
+                for j, paciente in enumerate(no_atual.pacientes_restantes):
+                    tempo_espera_real = (
+                        no_atual.tempo_atual + paciente["TempoEspera_Inicial_Minutos"]
+                    )
+                    risco_atendimento = self.calcular_risco_paciente(
+                        paciente["Probabilidade_Alta"], tempo_espera_real
+                    )
 
-                novo_tempo = no_atual.tempo_atual + self.tempo_atendimento
+                    novo_risco_g = no_atual.risco_acumulado_g + risco_atendimento
+                    novos_restantes = no_atual.pacientes_restantes.copy()
+                    novos_restantes.pop(j)
+                    nova_ordem = no_atual.ordem_atendimento + [paciente["ID_Paciente"]]
+                    novo_tempo = no_atual.tempo_atual + self.tempo_atendimento
 
-                novo_no = NoFila(novos_restantes, novo_risco_g, nova_ordem, novo_tempo)
-                heapq.heappush(fronteira, novo_no)
+                    novo_no = NoFila(
+                        novos_restantes, novo_risco_g, nova_ordem, novo_tempo
+                    )
+                    heapq.heappush(fronteira, novo_no)
 
-        return [], 0.0
+        return ordem_final_global, risco_total_global

@@ -1,16 +1,17 @@
 import pandas as pd
 import numpy as np
+from src import config
 
 
 class GeradorPacientesSinteticos:
     """Gerador de dados de pacientes sintéticos para testes e validação do sistema de triagem bayesiana."""
 
-    def __init__(self, seed: int | None = 13) -> None:
+    def __init__(self, seed: int | None = config.SEED_DETERMINISTICA) -> None:
         if seed is not None:
             np.random.seed(seed)
 
     def gerar_pacientes(self, num_pacientes: int = 50) -> pd.DataFrame:
-        """Gera um DataFrame com dados sintéticos de pacientes, incluindo variáveis relevantes para a triagem médica,
+        """Gera um DataFrame com dados sintéticos de pacientes, incluindo variáveis relevantes para a triagem médica.
 
         Args:
             num_pacientes (int, optional): Número de pacientes a serem gerados. Defaults to 50.
@@ -20,6 +21,9 @@ class GeradorPacientesSinteticos:
         """
         idades = np.random.randint(18, 91, size=num_pacientes)
         idade_avancada = np.where(idades > 60, "Verdadeiro", "Falso")
+        doenca_cronica = np.random.choice(
+            ["Falso", "Verdadeiro"], size=num_pacientes, p=[0.70, 0.30]
+        )
 
         sat_o2 = np.random.choice(
             ["Normal", "Baixa"], size=num_pacientes, p=[0.85, 0.15]
@@ -39,6 +43,7 @@ class GeradorPacientesSinteticos:
                 "ID_Paciente": np.arange(1, num_pacientes + 1),
                 "Idade_Anos": idades,
                 "IdadeAvancada": idade_avancada,
+                "DoencaCronica": doenca_cronica,
                 "SaturacaoO2": sat_o2,
                 "FrequenciaCardiaca": freq_card,
                 "NivelDor": dor,
