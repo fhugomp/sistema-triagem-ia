@@ -1,5 +1,5 @@
 import streamlit as st
-from typing import cast, List, Dict, Any, Tuple
+from typing import cast, List, Dict, Any, Tuple, Literal
 from src import config
 from src.data.generator import GeradorPacientesSinteticos
 from src.models.bayesian_net import SistemaTriagemBayesiana
@@ -16,7 +16,7 @@ st.title("Sistema Inteligente de Triagem Hospitalar")
 st.markdown("### Otimização de Filas Baseada em Redes Bayesianas e Algoritmo A*")
 st.markdown("---")
 
-with st.expander("📌 Sobre a Metodologia e Modelagem", expanded=False):
+with st.expander("Sobre a Metodologia e Modelagem", expanded=False):
     st.markdown(
         """
     **Resumo:** Este simulador apresenta uma modelagem preditiva e prescritiva para o fluxo de atendimento em prontos-socorros. 
@@ -56,7 +56,18 @@ num_pacientes = st.sidebar.slider(
     min_value=config.SLIDER_MIN_PACIENTES,
     max_value=config.SLIDER_MAX_PACIENTES,
     value=config.SLIDER_DEFAULT_PACIENTES,
-    step=10,
+    step=5,
+)
+
+st.sidebar.markdown("### Modelo de Deterioração Clínica")
+tipo_funcao_selecionada = st.sidebar.radio(
+    "Selecione a Função de Risco:",
+    options=["Linear", "Exponencial"],
+    help="Linear: Risco cresce proporcionalmente ao tempo. Exponencial: Simula quadros críticos que escalam rapidamente.",
+)
+
+tipo_funcao = cast(
+    Literal["linear", "exponencial"], str(tipo_funcao_selecionada).lower()
 )
 
 if st.sidebar.button("Executar Simulação de Cenário", type="primary"):
@@ -84,15 +95,27 @@ if st.sidebar.button("Executar Simulação de Cenário", type="primary"):
         lista_pacientes = cast(List[Dict[str, Any]], df_pacientes.to_dict("records"))
 
         # --- PASSO B: Execução Simulânea das Estratégias ---
-        ordem_fifo, risco_fifo = baselines.simular_fifo(lista_pacientes.copy())
-        ordem_gulosa, risco_gulosa = baselines.simular_gulosa(lista_pacientes.copy())
-        ordem_a_star, risco_a_star = a_star.otimizar_fila(lista_pacientes.copy())
+        ordem_fifo, risco_fifo = baselines.simular_fifo(
+            lista_pacientes.copy(), tipo_funcao
+        )
+        ordem_gulosa, risco_gulosa = baselines.simular_gulosa(
+            lista_pacientes.copy(), tipo_funcao
+        )
+        ordem_a_star, risco_a_star = a_star.otimizar_fila(
+            lista_pacientes.copy(), tipo_funcao=tipo_funcao
+        )
 
         # --- PASSO C: Renderização Analítica dos Resultados ---
         st.markdown("#### Análise Comparativa de Risco Acumulado")
-        st.markdown(
-            "> *Nota: O Risco Acumulado é modelado pela função $f(t) = P(Alta) \\times t$, onde menores valores indicam maior preservação da integridade clínica global.*"
-        )
+
+        if tipo_funcao == "linear":
+            st.markdown(
+                "> *Nota: O Risco Acumulado é modelado pela função linear $f(t) = P(Alta) \\times t$, onde menores valores indicam maior preservação da integridade clínica global.*"
+            )
+        else:
+            st.markdown(
+                "> *Nota: O Risco Acumulado é modelado pela função exponencial $f(t) = P(Alta) \\times e^{t/\\tau}$, simulando cenários não lineares de deterioração acelerada.*"
+            )
 
         col1, col2, col3 = st.columns(3)
 
