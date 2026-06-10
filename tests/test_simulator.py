@@ -30,8 +30,7 @@ def test_hard_flag_comparativo_estrategias(
     pacientes_cenario_critico: list[dict],
 ) -> None:
     """
-    Condição de Validação Absoluta:
-    O A* DEVE matematicamente produzir o menor valor de risco acumulado.
+    Validação Empírica: Os testes validam empiricamente, em múltiplos cenários simulados, que o particionamento do A produz um risco acumulado menor ou igual ao observado nas estratégias de controle (FIFO e Gulosa).
     """
     a_star = OtimizadorTriagemAStar(tempo_atendimento_minutos=15)
     baselines = BaselinesTriagem(tempo_atendimento_minutos=15)

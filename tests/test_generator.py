@@ -21,6 +21,7 @@ def test_tamanho_e_colunas_dataframe(gerador: GeradorPacientesSinteticos) -> Non
         "ID_Paciente",
         "Idade_Anos",
         "IdadeAvancada",
+        "DoencaCronica",
         "SaturacaoO2",
         "FrequenciaCardiaca",
         "NivelDor",

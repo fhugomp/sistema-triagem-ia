@@ -13,7 +13,7 @@ def rbn_sistema() -> SistemaTriagemBayesiana:
 def test_hard_flags_variaveis_e_estados(rbn_sistema: SistemaTriagemBayesiana) -> None:
     """
     Garante as flags:
-    - Exatas 5 variáveis de entrada e +1 de saída (Gravidade).
+    - Exatas 6 variáveis de entrada e +1 de saída (Gravidade).
     - Nó central "Gravidade" com 3 estados: baixa, média, alta.
     """
     # Verifica os estados do nó Gravidade
@@ -25,10 +25,11 @@ def test_hard_flags_variaveis_e_estados(rbn_sistema: SistemaTriagemBayesiana) ->
         "alta",
     ], "Falha na Hard Flag 3: Nomenclatura dos estados incorreta!"
 
-    # Verifica as 6 variáveis totais (5 inputs + 1 output)
+    # Verifica as 7 variáveis totais (6 inputs + 1 output)
     variaveis_modelo = rbn_sistema.model.nodes()
     variaveis_esperadas = [
         "IdadeAvancada",
+        "DoencaCronica",
         "Gravidade",
         "SaturacaoO2",
         "FrequenciaCardiaca",
