@@ -13,6 +13,9 @@ SLIDER_MIN_PACIENTES = 10
 SLIDER_MAX_PACIENTES = 100
 SLIDER_DEFAULT_PACIENTES = 30
 
+# Constante de controle da Função Exponencial (Tau)
+TAU_EXPONENCIAL = 60.0
+
 # Nomenclatura Padrão de Variáveis da Rede Bayesiana
 VARIAVEIS_ENTRADA = [
     "IdadeAvancada",
