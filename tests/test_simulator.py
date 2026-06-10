@@ -1,3 +1,4 @@
+import pytest
 from src.optimization.a_star import OtimizadorTriagemAStar
 from src.optimization.baselines import BaselinesTriagem
 
