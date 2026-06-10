@@ -18,7 +18,7 @@ typecheck:
 
 # Roda o sistema final no navegador
 run:
-	poetry run streamlit run src/main.py
+	poetry run streamlit run main.py
 
 # Roda todas as verificações de qualidade de uma vez antes de um "git commit"
 check-all: format lint typecheck test
