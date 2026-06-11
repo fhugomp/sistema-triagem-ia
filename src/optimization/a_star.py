@@ -5,10 +5,6 @@ from src import config
 
 
 class NoFila:
-    """
-    Representa um nó na fila de prioridade do algoritmo A*.
-    """
-
     def __init__(
         self,
         pacientes_restantes: List[Dict[str, Any]],
@@ -27,22 +23,15 @@ class NoFila:
         self.custo_f = self.risco_acumulado_g + self.heuristica_h
 
     def calcular_heuristica(self) -> float:
-        """
-        Calcula a heurística (h) para o nó atual, suportando risco linear e exponencial.
-        Foi utilizada uma heurística baseada na soma dos riscos atuais dos pacientes
-        restantes, conforme sugerido pelo escopo do edital.
-        """
         risco_h = 0.0
         for p in self.pacientes_restantes:
             tempo_espera_total = self.tempo_atual + p["TempoEspera_Inicial_Minutos"]
-
             if self.tipo_funcao == "exponencial":
                 risco_h += p["Probabilidade_Alta"] * math.exp(
                     tempo_espera_total / config.TAU_EXPONENCIAL
                 )
             else:
                 risco_h += p["Probabilidade_Alta"] * tempo_espera_total
-
         return risco_h
 
     def __lt__(self, other: "NoFila") -> bool:
@@ -50,10 +39,6 @@ class NoFila:
 
 
 class OtimizadorTriagemAStar:
-    """
-    Implementa o algoritmo A* para otimizar a ordem de atendimento dos pacientes na triagem.
-    """
-
     def __init__(
         self, tempo_atendimento_minutos: int = config.TEMPO_ATENDIMENTO_MINUTOS
     ):
@@ -65,7 +50,6 @@ class OtimizadorTriagemAStar:
         tempo_espera: int,
         tipo_funcao: Literal["linear", "exponencial"] = "linear",
     ) -> float:
-        """Calcula o risco individual de deterioração clínica (Linear ou Exponencial)."""
         if tipo_funcao == "exponencial":
             return prob_alta * math.exp(tempo_espera / config.TAU_EXPONENCIAL)
         return prob_alta * tempo_espera
@@ -75,14 +59,29 @@ class OtimizadorTriagemAStar:
         pacientes: List[Dict[str, Any]],
         tamanho_janela: int = config.TAMANHO_JANELA_A_STAR,
         tipo_funcao: Literal["linear", "exponencial"] = "linear",
+        estrategia_particionamento: Literal["fifo", "risco_inicial"] = "fifo",
     ) -> Tuple[List[int], float]:
         """
-        Executa o algoritmo A* através de um particionamento da fila (Sliding Window)
-        para contornar a explosão combinatória O(N!).
+        Executa o A* com Sliding Window, permitindo testar heuristicamente
+        como o viés do particionamento afeta a qualidade da busca local.
         """
-        pacientes_ordenados = sorted(
-            pacientes, key=lambda x: x["TempoEspera_Inicial_Minutos"], reverse=True
-        )
+
+        if estrategia_particionamento == "risco_inicial":
+            # Heurística experimental para mitigar a miopia
+            pacientes_ordenados = sorted(
+                pacientes,
+                key=lambda x: self.calcular_risco_paciente(
+                    x["Probabilidade_Alta"],
+                    x["TempoEspera_Inicial_Minutos"],
+                    tipo_funcao,
+                ),
+                reverse=True,
+            )
+        else:
+            # Aproximação temporal pura
+            pacientes_ordenados = sorted(
+                pacientes, key=lambda x: x["TempoEspera_Inicial_Minutos"], reverse=True
+            )
 
         ordem_final_global: List[int] = []
         risco_total_global = 0.0

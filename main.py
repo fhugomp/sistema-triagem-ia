@@ -56,7 +56,7 @@ num_pacientes = st.sidebar.slider(
     min_value=config.SLIDER_MIN_PACIENTES,
     max_value=config.SLIDER_MAX_PACIENTES,
     value=config.SLIDER_DEFAULT_PACIENTES,
-    step=5,
+    step=1,
 )
 
 st.sidebar.markdown("### Modelo de Deterioração Clínica")
@@ -69,6 +69,33 @@ tipo_funcao_selecionada = st.sidebar.radio(
 tipo_funcao = cast(
     Literal["linear", "exponencial"], str(tipo_funcao_selecionada).lower()
 )
+
+st.sidebar.markdown("### Heurística A* (Sliding Window)")
+estrategia_selecionada = st.sidebar.selectbox(
+    "Particionamento de Lotes:",
+    options=["Aproximação FIFO", "Risco Inicial (Mitiga Miopia)"],
+    help="Define como os pacientes são agrupados antes do algoritmo A* otimizar os blocos locais.",
+)
+
+map_estrategia: Dict[str, Literal["fifo", "risco_inicial"]] = {
+    "Aproximação FIFO": "fifo",
+    "Risco Inicial (Mitiga Miopia)": "risco_inicial",
+}
+estrategia_part = map_estrategia[str(estrategia_selecionada)]
+
+# --- NOVO: Feedback Didático na Interface ---
+if estrategia_part == "fifo":
+    st.sidebar.info(
+        "**Modo FIFO Ativo:** O A* agrupará os pacientes estritamente pelo tempo de espera. "
+        "Isto expõe a 'Miopia dos Lotes': pacientes críticos recentes podem ficar presos em lotes distantes, "
+        "fazendo com que a estratégia Gulosa global apresente menor risco."
+    )
+else:
+    st.sidebar.success(
+        "**Modo Risco Inicial Ativo:** O A* agrupará os pacientes mais perigosos no primeiro lote. "
+        "Isto mitiga a miopia e melhora significativamente a qualidade local do algoritmo A*."
+    )
+# ------------------------------------------
 
 if st.sidebar.button("Executar Simulação de Cenário", type="primary"):
     with st.spinner(
@@ -101,8 +128,11 @@ if st.sidebar.button("Executar Simulação de Cenário", type="primary"):
         ordem_gulosa, risco_gulosa = baselines.simular_gulosa(
             lista_pacientes.copy(), tipo_funcao
         )
+        # O A* agora recebe a estratégia de particionamento definida no selectbox
         ordem_a_star, risco_a_star = a_star.otimizar_fila(
-            lista_pacientes.copy(), tipo_funcao=tipo_funcao
+            lista_pacientes.copy(),
+            tipo_funcao=tipo_funcao,
+            estrategia_particionamento=estrategia_part,
         )
 
         # --- PASSO C: Renderização Analítica dos Resultados ---
