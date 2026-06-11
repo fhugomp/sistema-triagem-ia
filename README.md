@@ -1,6 +1,14 @@
 # Sistema Inteligente de Triagem Hospitalar
 
+[![Streamlit App](https://img.shields.io/badge/Streamlit-Demo-red?logo=streamlit)](https://sistemadetriagem.streamlit.app/)
+
 Este repositório documenta a implementação de um simulador de triagem médica baseado em Inteligência Artificial. O sistema propõe uma arquitetura computacional híbrida, integrando raciocínio probabilístico sob incerteza e otimização heurística, com o objetivo de mitigar o impacto da superlotação em prontos-socorros.
+
+## Demonstração Online
+
+A aplicação encontra-se disponível para execução diretamente no navegador através do Streamlit Cloud:
+
+> https://sistemadetriagem.streamlit.app/
 
 ## 1. Arquitetura do Sistema
 
