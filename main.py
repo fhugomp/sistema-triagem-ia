@@ -1,10 +1,17 @@
 import streamlit as st
-from typing import cast, List, Dict, Any, Tuple, Literal
-from src import config
+import plotly.express as px
+from typing import cast, Literal, List, Dict, Any, Tuple
+
+import src.config as config
 from src.data.generator import GeradorPacientesSinteticos
 from src.models.bayesian_net import SistemaTriagemBayesiana
 from src.optimization.a_star import OtimizadorTriagemAStar
 from src.optimization.baselines import BaselinesTriagem
+from src.utils import (
+    preparar_dados_grafico,
+    gerar_dataframe_auditoria,
+    preparar_dados_perfil_clinico,
+)
 
 st.set_page_config(
     page_title="Simulador de Triagem - IA",
@@ -152,95 +159,136 @@ if st.sidebar.button(
         )
 
         # --- PASSO C: Renderização Analítica dos Resultados ---
-        st.markdown("#### Análise Comparativa de Risco Acumulado")
+        st.markdown("---")
+        st.header("📊 Análise de Desempenho do Escalonamento")
 
-        if tipo_funcao == "linear":
-            st.markdown(
-                "> *Nota: O Risco Acumulado é modelado pela função linear $f(t) = P(Alta) \\times t$, onde menores valores indicam maior preservação da integridade clínica global.*"
-            )
-        else:
-            st.markdown(
-                "> *Nota: O Risco Acumulado é modelado pela função exponencial $f(t) = P(Alta) \\times e^{t/\\tau}$, simulando cenários não lineares de deterioração acelerada.*"
-            )
-
-        col1, col2, col3 = st.columns(3)
-
-        col1.metric("1. Estratégia FIFO (Controle)", f"{risco_fifo:.2f}")
-        col2.metric("2. Estratégia Gulosa (Greedy)", f"{risco_gulosa:.2f}")
-
-        delta_val = risco_fifo - risco_a_star
-        col3.metric(
-            "3. Otimização por Algoritmo A-Star",
-            f"{risco_a_star:.2f}",
-            delta=f"Redução Absoluta: {delta_val:.2f}",
-            delta_color="normal",
+        aba_executiva, aba_auditoria = st.tabs(
+            [
+                "Visão Executiva (Métricas e Gráficos)",
+                "Auditoria de Fila (Dados Brutos)",
+            ]
         )
 
-        st.divider()
+        with aba_executiva:
+            delta_matematico = risco_a_star - risco_gulosa
 
-        st.markdown("#### Distribuição de Filas e Ordem de Atendimento")
-        c1, c2, c3 = st.columns(3)
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric(
+                    label="Aproximação FIFO",
+                    value=f"{risco_fifo:,.2f}".replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", "."),
+                )
+            with col2:
+                st.metric(
+                    label="Heurística Gulosa",
+                    value=f"{risco_gulosa:,.2f}".replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", "."),
+                )
+            with col3:
+                st.metric(
+                    label="Busca A* (Otimizador)",
+                    value=f"{risco_a_star:,.2f}".replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", "."),
+                    delta=f"{delta_matematico:+.2f} vs Gulosa",
+                    delta_color="inverse",
+                )
 
-        col_config = {
-            "ID_Paciente": st.column_config.NumberColumn("ID", format="%d"),
-            "TempoEspera_Inicial_Minutos": st.column_config.NumberColumn(
-                "Tempo Fila (min)", format="%d"
-            ),
-            "Probabilidade_Alta": st.column_config.NumberColumn(
-                "P(Alta)", format="%.4f"
-            ),
-            "DoencaCronica": st.column_config.TextColumn("Doença Crônica"),
-        }
+            st.markdown("---")
 
-        with c1:
-            st.markdown("**Estratégia: FIFO**")
-            df_f = df_pacientes.set_index("ID_Paciente").loc[ordem_fifo].reset_index()
-            st.dataframe(
-                df_f[
-                    [
-                        "ID_Paciente",
-                        "TempoEspera_Inicial_Minutos",
-                        "Probabilidade_Alta",
-                        "DoencaCronica",
-                    ]
-                ],
-                use_container_width=True,
-                column_config=col_config,
+            # Divisão espacial para aumento da densidade informacional
+            grafico_esq, grafico_dir = st.columns(2)
+
+            with grafico_esq:
+                st.markdown("### Perfil Clínico da Fila (Input)")
+                df_perfil = preparar_dados_perfil_clinico(lista_pacientes)
+
+                fig_perfil = px.histogram(
+                    df_perfil,
+                    x="Categoria de Risco",
+                    color="Categoria de Risco",
+                    color_discrete_map={
+                        "Baixo Risco": "#636EFA",
+                        "Risco Moderado": "#FFA15A",
+                        "Alto Risco": "#EF553B",
+                    },
+                    text_auto=True,
+                )
+                fig_perfil.update_layout(
+                    xaxis_title=None,
+                    yaxis_title="Volume de Pacientes",
+                    showlegend=False,
+                    margin=dict(t=20, b=0, l=0, r=0),
+                )
+                st.plotly_chart(fig_perfil, use_container_width=True)
+
+            with grafico_dir:
+                st.markdown("### Risco Global Acumulado (Output)")
+                df_grafico = preparar_dados_grafico(
+                    risco_fifo, risco_gulosa, risco_a_star
+                )
+
+                fig_risco = px.bar(
+                    df_grafico,
+                    x="Risco Global Acumulado",
+                    y="Estratégia",
+                    orientation="h",
+                    color="Estratégia",
+                    text="Risco Global Acumulado",
+                    color_discrete_map={
+                        "Aproximação FIFO": "#636EFA",
+                        "Heurística Gulosa": "#EF553B",
+                        "Busca A* (Otimizador)": "#00CC96",
+                    },
+                )
+
+                min_risco = df_grafico["Risco Global Acumulado"].min()
+                max_risco = df_grafico["Risco Global Acumulado"].max()
+                margem = (
+                    (max_risco - min_risco) * 0.5
+                    if max_risco != min_risco
+                    else max_risco * 0.1
+                )
+
+                fig_risco.update_layout(
+                    xaxis=dict(range=[max(0, min_risco - margem), max_risco + margem]),
+                    xaxis_title="Risco Numérico",
+                    yaxis_title=None,
+                    showlegend=False,
+                    margin=dict(t=20, b=0, l=0, r=0),
+                )
+                fig_risco.update_traces(
+                    texttemplate="%{text:,.2f}", textposition="outside"
+                )
+
+                st.plotly_chart(fig_risco, use_container_width=True)
+
+        with aba_auditoria:
+            st.markdown("### Exportação e Auditoria de Resultados")
+            st.info(
+                "Utilize as tabelas abaixo para auditar a ordem de atendimento gerada por cada algoritmo ou exporte os dados no formato CSV para softwares estatísticos."
             )
 
-        with c2:
-            st.markdown("**Estratégia: Gulosa**")
-            df_g = df_pacientes.set_index("ID_Paciente").loc[ordem_gulosa].reset_index()
-            st.dataframe(
-                df_g[
-                    [
-                        "ID_Paciente",
-                        "TempoEspera_Inicial_Minutos",
-                        "Probabilidade_Alta",
-                        "DoencaCronica",
-                    ]
-                ],
-                use_container_width=True,
-                column_config=col_config,
+            df_a_star_audit = gerar_dataframe_auditoria(lista_pacientes, ordem_a_star)
+
+            csv_data = df_a_star_audit.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="📥 Baixar Dados da Fila A* (CSV)",
+                data=csv_data,
+                file_name="auditoria_fila_a_star.csv",
+                mime="text/csv",
             )
 
-        with c3:
-            st.markdown("**Estratégia: A-Star**")
-            df_a = df_pacientes.set_index("ID_Paciente").loc[ordem_a_star].reset_index()
-            st.dataframe(
-                df_a[
-                    [
-                        "ID_Paciente",
-                        "TempoEspera_Inicial_Minutos",
-                        "Probabilidade_Alta",
-                        "DoencaCronica",
-                    ]
-                ],
-                use_container_width=True,
-                column_config=col_config,
-            )
+            st.markdown("#### Matriz de Permutação: Busca A*")
+            st.dataframe(df_a_star_audit, use_container_width=True)
 
-else:
-    st.info(
-        "Aguardando inicialização. Ajuste os parâmetros na barra lateral e inicie a simulação para gerar os relatórios analíticos."
-    )
+            st.markdown("#### Matriz de Permutação: Heurística Gulosa")
+            df_gulosa_audit = gerar_dataframe_auditoria(lista_pacientes, ordem_gulosa)
+            st.dataframe(df_gulosa_audit, use_container_width=True)
+
+            st.markdown("#### Matriz de Permutação: Aproximação FIFO")
+            df_fifo_audit = gerar_dataframe_auditoria(lista_pacientes, ordem_fifo)
+            st.dataframe(df_fifo_audit, use_container_width=True)
