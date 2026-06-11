@@ -60,14 +60,15 @@ class OtimizadorTriagemAStar:
         tamanho_janela: int = config.TAMANHO_JANELA_A_STAR,
         tipo_funcao: Literal["linear", "exponencial"] = "linear",
         estrategia_particionamento: Literal["fifo", "risco_inicial"] = "fifo",
+        usar_janela: bool = True,
     ) -> Tuple[List[int], float]:
         """
-        Executa o A* com Sliding Window, permitindo testar heuristicamente
-        como o viés do particionamento afeta a qualidade da busca local.
+        Executa o A*. Se 'usar_janela' for False, o algoritmo atuará de forma global,
+        processando a fila inteira em um único bloco matemático (restrito a filas pequenas).
         """
+        janela_efetiva = tamanho_janela if usar_janela else len(pacientes)
 
         if estrategia_particionamento == "risco_inicial":
-            # Heurística experimental para mitigar a miopia
             pacientes_ordenados = sorted(
                 pacientes,
                 key=lambda x: self.calcular_risco_paciente(
@@ -78,7 +79,6 @@ class OtimizadorTriagemAStar:
                 reverse=True,
             )
         else:
-            # Aproximação temporal pura
             pacientes_ordenados = sorted(
                 pacientes, key=lambda x: x["TempoEspera_Inicial_Minutos"], reverse=True
             )
@@ -87,8 +87,8 @@ class OtimizadorTriagemAStar:
         risco_total_global = 0.0
         tempo_acumulado = 0
 
-        for i in range(0, len(pacientes_ordenados), tamanho_janela):
-            lote = [p.copy() for p in pacientes_ordenados[i : i + tamanho_janela]]
+        for i in range(0, len(pacientes_ordenados), janela_efetiva):
+            lote = [p.copy() for p in pacientes_ordenados[i : i + janela_efetiva]]
 
             no_inicial = NoFila(
                 lote,

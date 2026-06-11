@@ -70,34 +70,47 @@ tipo_funcao = cast(
     Literal["linear", "exponencial"], str(tipo_funcao_selecionada).lower()
 )
 
-st.sidebar.markdown("### Heurística A* (Sliding Window)")
-estrategia_selecionada = st.sidebar.selectbox(
-    "Particionamento de Lotes:",
-    options=["Aproximação FIFO", "Risco Inicial (Mitiga Miopia)"],
-    help="Define como os pacientes são agrupados antes do algoritmo A* otimizar os blocos locais.",
+st.sidebar.markdown("### Motor Otimizador (Algoritmo A*)")
+modo_a_star = st.sidebar.radio(
+    "Modo de Execução:",
+    options=["A* Global (Ótimo Matemático)", "A* Particionado (Sliding Window)"],
+    help="Global: Explora todo o espaço de estados simultaneamente. Particionado: Utiliza lotes para mitigar a explosão combinatória.",
 )
+usar_janela = modo_a_star == "A* Particionado (Sliding Window)"
 
-map_estrategia: Dict[str, Literal["fifo", "risco_inicial"]] = {
-    "Aproximação FIFO": "fifo",
-    "Risco Inicial (Mitiga Miopia)": "risco_inicial",
-}
-estrategia_part = map_estrategia[str(estrategia_selecionada)]
-
-# --- NOVO: Feedback Didático na Interface ---
-if estrategia_part == "fifo":
-    st.sidebar.info(
-        "**Modo FIFO Ativo:** O A* agrupará os pacientes estritamente pelo tempo de espera. "
-        "Isto expõe a 'Miopia dos Lotes': pacientes críticos recentes podem ficar presos em lotes distantes, "
-        "fazendo com que a estratégia Gulosa global apresente menor risco."
+# Se o usuário escolheu particionado, ele pode escolher a heurística do lote
+estrategia_part = "fifo"
+if usar_janela:
+    estrategia_selecionada = st.sidebar.selectbox(
+        "Heurística de Particionamento dos Lotes:",
+        options=["Aproximação FIFO", "Risco Inicial (Mitiga Miopia)"],
     )
-else:
-    st.sidebar.success(
-        "**Modo Risco Inicial Ativo:** O A* agrupará os pacientes mais perigosos no primeiro lote. "
-        "Isto mitiga a miopia e melhora significativamente a qualidade local do algoritmo A*."
-    )
-# ------------------------------------------
+    map_estrategia: Dict[str, Literal["fifo", "risco_inicial"]] = {
+        "Aproximação FIFO": "fifo",
+        "Risco Inicial (Mitiga Miopia)": "risco_inicial",
+    }
+    estrategia_part = map_estrategia[str(estrategia_selecionada)]
 
-if st.sidebar.button("Executar Simulação de Cenário", type="primary"):
+    if estrategia_part == "fifo":
+        st.sidebar.info(
+            "Modo FIFO Ativo: O algoritmo prioriza o tempo de espera para formar os blocos, gerando 'miopia local' em populações grandes."
+        )
+    else:
+        st.sidebar.success(
+            "Risco Inicial Ativo: O algoritmo prioriza a gravidade na formação dos blocos, mitigando a miopia da janela."
+        )
+
+# Disjuntor de Segurança para Explosão Combinatória
+bloquear_execucao = False
+if not usar_janela and num_pacientes > 8:
+    st.sidebar.error(
+        "🚨 Ação Bloqueada: O A* Global explora O(N!) possibilidades. Para N > 8, o processador travaria. Reduza a amostra para 8 pacientes ou altere o modo para A* Particionado."
+    )
+    bloquear_execucao = True
+
+if st.sidebar.button(
+    "Executar Simulação de Cenário", type="primary", disabled=bloquear_execucao
+):
     with st.spinner(
         "Processando Inferência Probabilística e Otimização do Espaço de Estados..."
     ):
@@ -128,11 +141,14 @@ if st.sidebar.button("Executar Simulação de Cenário", type="primary"):
         ordem_gulosa, risco_gulosa = baselines.simular_gulosa(
             lista_pacientes.copy(), tipo_funcao
         )
-        # O A* agora recebe a estratégia de particionamento definida no selectbox
+
         ordem_a_star, risco_a_star = a_star.otimizar_fila(
             lista_pacientes.copy(),
             tipo_funcao=tipo_funcao,
-            estrategia_particionamento=estrategia_part,
+            estrategia_particionamento=cast(
+                Literal["fifo", "risco_inicial"], estrategia_part
+            ),
+            usar_janela=usar_janela,
         )
 
         # --- PASSO C: Renderização Analítica dos Resultados ---
