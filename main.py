@@ -292,3 +292,70 @@ if st.sidebar.button(
             st.markdown("#### Matriz de Permutação: Aproximação FIFO")
             df_fifo_audit = gerar_dataframe_auditoria(lista_pacientes, ordem_fifo)
             st.dataframe(df_fifo_audit, use_container_width=True)
+
+rodape_html = """
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .standard-footer {
+        margin-top: 50px;
+        padding: 20px 0;
+        border-top: 1px solid #e6e6e6;
+        color: #666;
+        font-family: sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: transparent;
+    }
+
+    /* Suporte nativo para Modo Escuro do Streamlit */
+    @media (prefers-color-scheme: dark) {
+        .standard-footer {
+            border-top: 1px solid #2b2b36;
+            color: #a0a0a0;
+        }
+    }
+
+    .standard-footer .footer-text {
+        margin-bottom: 12px;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    .standard-footer .footer-links {
+        display: flex;
+        gap: 24px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .standard-footer a {
+        color: #00CC96;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: color 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .standard-footer a:hover {
+        color: #009970;
+    }
+</style>
+
+<div class="standard-footer">
+    <div class="footer-text">
+        <strong>© 2026 Desenvolvido por Hugo Mendes</strong>
+    </div>
+    <div class="footer-links">
+        <a href="https://github.com/fhugomp" target="_blank"><i class="fab fa-github"></i> GitHub</a>
+        <a href="https://linkedin.com/in/fhugomp" target="_blank"><i class="fab fa-linkedin"></i> LinkedIn</a>
+        <a href="https://fhugomp.github.io" target="_blank"><i class="fas fa-globe"></i> Portfólio Profissional</a>
+    </div>
+</div>
+"""
+
+st.markdown(rodape_html, unsafe_allow_html=True)
