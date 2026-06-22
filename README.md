@@ -49,7 +49,7 @@ A execução do sistema requer o seguinte ambiente de desenvolvimento configurad
 
 1. Realize a clonagem do repositório localmente:
 ```bash
-git clone [https://github.com/fhugomp/sistema-triagem-ia.git](https://github.com/fhugomp/sistema-triagem-ia.git)
+git clone https://github.com/fhugomp/sistema-triagem-ia.git
 ```
 
 2. Abra a pasta do projeto:
