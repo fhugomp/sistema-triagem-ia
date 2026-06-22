@@ -7,6 +7,7 @@ Este repositório documenta a implementação de um simulador de triagem médica
 ## Demonstração Online
 
 A aplicação encontra-se disponível para execução diretamente no navegador através do Streamlit Cloud:
+> **Nota: Caso a aplicação esteja em modo de espera (inativa), basta clicar no botão "Yes, get this app back up!" na tela para que o Streamlit a reative automaticamente.**
 
 > https://sistemadetriagem.streamlit.app/
 
