@@ -35,26 +35,14 @@ with st.expander("Sobre a Metodologia e Modelagem", expanded=False):
 
 
 @st.cache_resource
-def inicializar_sistema() -> (
-    Tuple[
-        GeradorPacientesSinteticos,
-        SistemaTriagemBayesiana,
-        OtimizadorTriagemAStar,
-        BaselinesTriagem,
-    ]
-):
-    gerador = GeradorPacientesSinteticos(seed=config.SEED_DETERMINISTICA)
+def inicializar_sistema():
     rbn = SistemaTriagemBayesiana()
-    a_star = OtimizadorTriagemAStar(
-        tempo_atendimento_minutos=config.TEMPO_ATENDIMENTO_MINUTOS
-    )
-    baselines = BaselinesTriagem(
-        tempo_atendimento_minutos=config.TEMPO_ATENDIMENTO_MINUTOS
-    )
-    return gerador, rbn, a_star, baselines
+    a_star = OtimizadorTriagemAStar(tempo_atendimento_minutos=config.TEMPO_ATENDIMENTO_MINUTOS)
+    baselines = BaselinesTriagem(tempo_atendimento_minutos=config.TEMPO_ATENDIMENTO_MINUTOS)
+    return rbn, a_star, baselines
 
-
-gerador, rbn, a_star, baselines = inicializar_sistema()
+rbn, a_star, baselines = inicializar_sistema()
+gerador = GeradorPacientesSinteticos(seed=None)
 
 # Barra Lateral (Painel de Controle)
 st.sidebar.markdown("### Configurações da Simulação")
@@ -86,26 +74,7 @@ modo_a_star = st.sidebar.radio(
 usar_janela = modo_a_star == "A* Particionado (Sliding Window)"
 
 # Se o usuário escolheu particionado, ele pode escolher a heurística do lote
-estrategia_part = "fifo"
-if usar_janela:
-    estrategia_selecionada = st.sidebar.selectbox(
-        "Heurística de Particionamento dos Lotes:",
-        options=["Aproximação FIFO", "Risco Inicial (Mitiga Miopia)"],
-    )
-    map_estrategia: Dict[str, Literal["fifo", "risco_inicial"]] = {
-        "Aproximação FIFO": "fifo",
-        "Risco Inicial (Mitiga Miopia)": "risco_inicial",
-    }
-    estrategia_part = map_estrategia[str(estrategia_selecionada)]
-
-    if estrategia_part == "fifo":
-        st.sidebar.info(
-            "Modo FIFO Ativo: O algoritmo prioriza o tempo de espera para formar os blocos, gerando 'miopia local' em populações grandes."
-        )
-    else:
-        st.sidebar.success(
-            "Risco Inicial Ativo: O algoritmo prioriza a gravidade na formação dos blocos, mitigando a miopia da janela."
-        )
+estrategia_part: Literal["fifo", "risco_inicial"] = "risco_inicial"
 
 # Disjuntor de Segurança para Explosão Combinatória
 bloquear_execucao = False

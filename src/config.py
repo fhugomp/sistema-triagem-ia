@@ -11,7 +11,7 @@ TAMANHO_JANELA_A_STAR = 8
 # Parâmetros da Interface Web (Streamlit)
 SLIDER_MIN_PACIENTES = 5
 SLIDER_MAX_PACIENTES = 100
-SLIDER_DEFAULT_PACIENTES = 30
+SLIDER_DEFAULT_PACIENTES = 8
 
 # Constante de controle da Função Exponencial (Tau)
 TAU_EXPONENCIAL = 60.0
