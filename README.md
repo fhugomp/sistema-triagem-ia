@@ -103,10 +103,10 @@ sistema-triagem-ia/
 ### Principais Componentes
 ```text
 bayesian_net.py  -  Inferência probabilística
-a_star.py  -  Busca heurística
-baselines.py  -  Estratégias FIFO e Gulosa
-generator.py  -  Geração de pacientes sintéticos
-main.py  -  Interface Streamlit
+a_star.py        -  Busca heurística
+baselines.py     -  Estratégias FIFO e Gulosa
+generator.py     -  Geração de pacientes sintéticos
+main.py          -  Interface Streamlit
 ```
 
 ## 6. Considerações Metodológicas e Conclusões
