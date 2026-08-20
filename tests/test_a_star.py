@@ -1,5 +1,6 @@
 import pytest
 from src.optimization.a_star import OtimizadorTriagemAStar, NoFila
+from src.models.paciente import Paciente
 
 
 @pytest.fixture
@@ -9,20 +10,45 @@ def otimizador() -> OtimizadorTriagemAStar:
 
 
 @pytest.fixture
-def pacientes_mock() -> list[dict]:
+def pacientes_mock() -> list[Paciente]:
     """Cria uma mini-fila controlada para testes matemáticos."""
     return [
-        {
-            "ID_Paciente": 1,
-            "TempoEspera_Inicial_Minutos": 10,
-            "Probabilidade_Alta": 0.8,
-        },
-        {
-            "ID_Paciente": 2,
-            "TempoEspera_Inicial_Minutos": 50,
-            "Probabilidade_Alta": 0.2,
-        },
-        {"ID_Paciente": 3, "TempoEspera_Inicial_Minutos": 5, "Probabilidade_Alta": 0.9},
+        Paciente(
+            id_paciente=1,
+            idade_anos=30,
+            idade_avancada="Falso",
+            doenca_cronica="Falso",
+            saturacao_o2="Normal",
+            frequencia_cardiaca="Normal",
+            nivel_dor="Leve",
+            febre="Ausente",
+            tempo_espera_inicial_minutos=10,
+            probabilidade_alta=0.8,
+        ),
+        Paciente(
+            id_paciente=2,
+            idade_anos=30,
+            idade_avancada="Falso",
+            doenca_cronica="Falso",
+            saturacao_o2="Normal",
+            frequencia_cardiaca="Normal",
+            nivel_dor="Leve",
+            febre="Ausente",
+            tempo_espera_inicial_minutos=50,
+            probabilidade_alta=0.2,
+        ),
+        Paciente(
+            id_paciente=3,
+            idade_anos=30,
+            idade_avancada="Falso",
+            doenca_cronica="Falso",
+            saturacao_o2="Normal",
+            frequencia_cardiaca="Normal",
+            nivel_dor="Leve",
+            febre="Ausente",
+            tempo_espera_inicial_minutos=5,
+            probabilidade_alta=0.9,
+        ),
     ]
 
 
@@ -32,7 +58,7 @@ def test_calculo_risco(otimizador: OtimizadorTriagemAStar) -> None:
     assert risco == pytest.approx(8.0)
 
 
-def test_heuristica_admissivel(pacientes_mock: list[dict]) -> None:
+def test_heuristica_admissivel(pacientes_mock: list[Paciente]) -> None:
     """
     Valida a Hard Flag 5: h(n) deve ser a soma dos riscos de todos na fila.
     Matemática esperada:
@@ -67,7 +93,7 @@ def test_comparacao_nos_fila_prioridade() -> None:
 
 
 def test_a_star_esvazia_fila(
-    otimizador: OtimizadorTriagemAStar, pacientes_mock: list[dict]
+    otimizador: OtimizadorTriagemAStar, pacientes_mock: list[Paciente]
 ) -> None:
     """Garante que o A* atende todos os pacientes e retorna uma ordem completa."""
     ordem, risco_total = otimizador.otimizar_fila(pacientes_mock)

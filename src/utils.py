@@ -1,5 +1,6 @@
 import pandas as pd
-from typing import List, Dict, Any
+from typing import List
+from src.models.paciente import Paciente
 
 
 def preparar_dados_grafico(
@@ -30,26 +31,28 @@ def preparar_dados_grafico(
 
 
 def gerar_dataframe_auditoria(
-    lista_pacientes: List[Dict[str, Any]], ordem_atendimento: List[int]
+    pacientes: List[Paciente], ordem_atendimento: List[int]
 ) -> pd.DataFrame:
     """
     Reordena o conjunto original de pacientes com base na matriz de permutação
     gerada pelos algoritmos de otimização, preparando para exportação.
     """
-    df = pd.DataFrame(lista_pacientes)
+    lista_dicts = [p.model_dump(by_alias=True) for p in pacientes]
+    df = pd.DataFrame(lista_dicts)
     df.set_index("ID_Paciente", inplace=True)
     df_ordenado = df.loc[ordem_atendimento].reset_index()
     return df_ordenado
 
 
 def preparar_dados_perfil_clinico(
-    lista_pacientes: List[Dict[str, Any]],
+    pacientes: List[Paciente],
 ) -> pd.DataFrame:
     """
     Extrai as probabilidades de deterioração clínica e categoriza os níveis de risco
     para visualização da distribuição de entrada (input) da Rede Bayesiana.
     """
-    df = pd.DataFrame(lista_pacientes)
+    lista_dicts = [p.model_dump(by_alias=True) for p in pacientes]
+    df = pd.DataFrame(lista_dicts)
 
     # Definição de limites estatísticos para categorização de risco
     bins = [-0.1, 0.33, 0.66, 1.1]

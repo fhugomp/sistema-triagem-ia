@@ -1,22 +1,26 @@
-from typing import Dict, cast, List
+from typing import Dict, cast, List, Union
 from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD, DiscreteFactor
 from pgmpy.inference import VariableElimination
 from src import config
+from src.models.paciente import Paciente
 
 
 class SistemaTriagemBayesiana:
     """
     Sistema de triagem médica baseado numa Rede Bayesiana Diagnóstica.
-    Estrutura aderente ao edital: Evidências (Sintomas) -> Nó Central (Gravidade).
+    Estrutura com relacionamentos causais entre evidências -> Nó Central (Gravidade).
     """
 
     def __init__(self) -> None:
         self.model = BayesianNetwork(
             [
+                ("IdadeAvancada", "DoencaCronica"),
                 ("IdadeAvancada", "Gravidade"),
+                ("DoencaCronica", "SaturacaoO2"),
                 ("DoencaCronica", "Gravidade"),
                 ("SaturacaoO2", "Gravidade"),
+                ("Febre", "FrequenciaCardiaca"),
                 ("FrequenciaCardiaca", "Gravidade"),
                 ("NivelDor", "Gravidade"),
                 ("Febre", "Gravidade"),
@@ -31,7 +35,6 @@ class SistemaTriagemBayesiana:
     def _construir_cpts(self) -> None:
         """
         Define as tabelas de probabilidade condicional.
-        Como a Gravidade depende de 6 nós pais, a sua CPT possui 64 colunas.
         """
         # CPTs Independentes (Nós Raiz)
         cpd_idade = TabularCPD(
@@ -40,24 +43,6 @@ class SistemaTriagemBayesiana:
             [[0.7], [0.3]],
             state_names={"IdadeAvancada": ["Falso", "Verdadeiro"]},
         )
-        cpd_doenca = TabularCPD(
-            "DoencaCronica",
-            2,
-            [[0.7], [0.3]],
-            state_names={"DoencaCronica": ["Falso", "Verdadeiro"]},
-        )
-        cpd_sat = TabularCPD(
-            "SaturacaoO2",
-            2,
-            [[0.85], [0.15]],
-            state_names={"SaturacaoO2": ["Normal", "Baixa"]},
-        )
-        cpd_freq = TabularCPD(
-            "FrequenciaCardiaca",
-            2,
-            [[0.7], [0.3]],
-            state_names={"FrequenciaCardiaca": ["Normal", "Alta"]},
-        )
         cpd_dor = TabularCPD(
             "NivelDor", 2, [[0.6], [0.4]], state_names={"NivelDor": ["Leve", "Intensa"]}
         )
@@ -65,15 +50,53 @@ class SistemaTriagemBayesiana:
             "Febre", 2, [[0.75], [0.25]], state_names={"Febre": ["Ausente", "Presente"]}
         )
 
+        # CPTs Condicionais
+        # IdadeAvancada -> DoencaCronica
+        # IdadeAvancada:   Falso  Verdadeiro
+        # Falso            0.80   0.45
+        # Verdadeiro       0.20   0.55
+        cpd_doenca = TabularCPD(
+            variable="DoencaCronica",
+            variable_card=2,
+            values=[[0.80, 0.45], [0.20, 0.55]],
+            evidence=["IdadeAvancada"],
+            evidence_card=[2],
+            state_names={"DoencaCronica": ["Falso", "Verdadeiro"], "IdadeAvancada": ["Falso", "Verdadeiro"]},
+        )
+
+        # DoencaCronica -> SaturacaoO2
+        # DoencaCronica:   Falso  Verdadeiro
+        # Normal           0.90   0.70
+        # Baixa            0.10   0.30
+        cpd_sat = TabularCPD(
+            variable="SaturacaoO2",
+            variable_card=2,
+            values=[[0.90, 0.70], [0.10, 0.30]],
+            evidence=["DoencaCronica"],
+            evidence_card=[2],
+            state_names={"SaturacaoO2": ["Normal", "Baixa"], "DoencaCronica": ["Falso", "Verdadeiro"]},
+        )
+
+        # Febre -> FrequenciaCardiaca
+        # Febre:           Ausente Presente
+        # Normal           0.80    0.45
+        # Alta             0.20    0.55
+        cpd_freq = TabularCPD(
+            variable="FrequenciaCardiaca",
+            variable_card=2,
+            values=[[0.80, 0.45], [0.20, 0.55]],
+            evidence=["Febre"],
+            evidence_card=[2],
+            state_names={"FrequenciaCardiaca": ["Normal", "Alta"], "Febre": ["Ausente", "Presente"]},
+        )
+
         # CPT Dinâmica para Gravidade (6 pais = 2^6 = 64 combinações)
-        # Utilizaremos um sistema de pontuação para preencher a tabela de forma clinicamente plausível
         probs_baixa: List[float] = []
         probs_media: List[float] = []
         probs_alta: List[float] = []
 
         # Pgmpy itera a evidência da direita para a esquerda. Ordem: Febre, Dor, Freq, Sat, Doenca, Idade
         for i in range(64):
-            # Converte o índice i para binário para saber os estados (0=Falso/Normal, 1=Verdadeiro/Anormal)
             idade = (i >> 5) & 1
             doenca = (i >> 4) & 1
             sat = (i >> 3) & 1
@@ -81,7 +104,6 @@ class SistemaTriagemBayesiana:
             dor = (i >> 1) & 1
             febre = i & 1
 
-            # Score Clínico Baseado em Pesos
             score = (
                 (idade * 1.5)
                 + (doenca * 2.0)
@@ -90,11 +112,10 @@ class SistemaTriagemBayesiana:
                 + (dor * 1.5)
                 + (febre * 1.0)
             )
-            max_score = 10.5  # Soma de todos os pesos
+            max_score = 10.5
 
             fator_risco = score / max_score
 
-            # Distribuição heurística baseada no fator de risco
             if fator_risco < 0.3:
                 p_alta = fator_risco * 0.1
                 p_baixa = 0.8 - (fator_risco * 0.5)
@@ -108,7 +129,6 @@ class SistemaTriagemBayesiana:
             p_baixa = max(0.01, p_baixa)
             p_media = max(0.01, 1.0 - p_alta - p_baixa)
 
-            # Normalização estrita para fechar em 1.0
             soma = p_baixa + p_media + p_alta
             probs_baixa.append(p_baixa / soma)
             probs_media.append(p_media / soma)
@@ -143,8 +163,13 @@ class SistemaTriagemBayesiana:
         )
 
     def calcular_probabilidade_gravidade(
-        self, evidencias: Dict[str, str]
+        self, paciente_ou_evidencias: Union[Dict[str, str], Paciente]
     ) -> Dict[str, float]:
+        if isinstance(paciente_ou_evidencias, Paciente):
+            evidencias = paciente_ou_evidencias.evidencias_bayesianas
+        else:
+            evidencias = paciente_ou_evidencias
+
         chave_cache = "_".join(f"{k}-{v}" for k, v in sorted(evidencias.items()))
         if chave_cache in self._cache_inferencia:
             return self._cache_inferencia[chave_cache]

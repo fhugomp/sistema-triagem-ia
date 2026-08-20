@@ -3,6 +3,7 @@ from typing import cast, List, Dict, Any
 
 from src.data.generator import GeradorPacientesSinteticos
 from src.models.bayesian_net import SistemaTriagemBayesiana
+from src.models.paciente import Paciente
 from src.optimization.a_star import OtimizadorTriagemAStar
 from src.optimization.baselines import BaselinesTriagem
 
@@ -37,23 +38,13 @@ def test_hard_flag_comparativo_estrategias(
     Validação Empírica (Miopia): Comprova que o particionamento temporal do A* (Sliding Window)
     em cenários de superlotação (N=30) produz risco sistematicamente inferior à fila inercial (FIFO).
     """
-    df_pacientes = gerador.gerar_pacientes(30)
+    pacientes = gerador.gerar_pacientes(30)
 
-    probabilidades_alta = []
-    for _, row in df_pacientes.iterrows():
-        evidencias = {
-            "IdadeAvancada": str(row["IdadeAvancada"]),
-            "DoencaCronica": str(row["DoencaCronica"]),
-            "SaturacaoO2": str(row["SaturacaoO2"]),
-            "FrequenciaCardiaca": str(row["FrequenciaCardiaca"]),
-            "NivelDor": str(row["NivelDor"]),
-            "Febre": str(row["Febre"]),
-        }
-        probs = rbn_sistema.calcular_probabilidade_gravidade(evidencias)
-        probabilidades_alta.append(probs["alta"] if probs else 0.0)
-
-    df_pacientes["Probabilidade_Alta"] = probabilidades_alta
-    lista_pacientes = cast(List[Dict[str, Any]], df_pacientes.to_dict("records"))
+    lista_pacientes = []
+    for p in pacientes:
+        probs = rbn_sistema.calcular_probabilidade_gravidade(p)
+        prob_alta = probs["alta"] if probs else 0.0
+        lista_pacientes.append(p.model_copy(update={"probabilidade_alta": prob_alta}))
 
     _, risco_fifo = baselines.simular_fifo(lista_pacientes.copy(), tipo_funcao="linear")
     _, risco_a_star = a_star.otimizar_fila(
@@ -79,23 +70,13 @@ def test_prova_otimalidade_a_star_global(
     Comprova que, ao desativar o particionamento em uma amostra tratável (N=6),
     o A* explora o espaço completo e atinge solução igual ou melhor à heurística Gulosa.
     """
-    df_pacientes = gerador.gerar_pacientes(6)
+    pacientes = gerador.gerar_pacientes(6)
 
-    probabilidades_alta = []
-    for _, row in df_pacientes.iterrows():
-        evidencias = {
-            "IdadeAvancada": str(row["IdadeAvancada"]),
-            "DoencaCronica": str(row["DoencaCronica"]),
-            "SaturacaoO2": str(row["SaturacaoO2"]),
-            "FrequenciaCardiaca": str(row["FrequenciaCardiaca"]),
-            "NivelDor": str(row["NivelDor"]),
-            "Febre": str(row["Febre"]),
-        }
-        probs = rbn_sistema.calcular_probabilidade_gravidade(evidencias)
-        probabilidades_alta.append(probs["alta"] if probs else 0.0)
-
-    df_pacientes["Probabilidade_Alta"] = probabilidades_alta
-    lista_pacientes = cast(List[Dict[str, Any]], df_pacientes.to_dict("records"))
+    lista_pacientes = []
+    for p in pacientes:
+        probs = rbn_sistema.calcular_probabilidade_gravidade(p)
+        prob_alta = probs["alta"] if probs else 0.0
+        lista_pacientes.append(p.model_copy(update={"probabilidade_alta": prob_alta}))
 
     _, risco_gulosa = baselines.simular_gulosa(
         lista_pacientes.copy(), tipo_funcao="linear"
@@ -118,12 +99,13 @@ def test_cobertura_heuristica_risco_inicial(
     Garante que a heurística mitigadora (Risco Inicial) mapeia o particionamento
     sem omissão ou duplicação de entidades.
     """
-    df_pacientes = gerador.gerar_pacientes(15)
+    pacientes = gerador.gerar_pacientes(15)
 
     # Injeção estática paramétrica para teste isolado de infraestrutura de ordenação
-    df_pacientes["Probabilidade_Alta"] = 0.5
-    df_pacientes["TempoEspera_Inicial_Minutos"] = 10
-    lista_pacientes = cast(List[Dict[str, Any]], df_pacientes.to_dict("records"))
+    lista_pacientes = [
+        p.model_copy(update={"probabilidade_alta": 0.5, "tempo_espera_inicial_minutos": 10})
+        for p in pacientes
+    ]
 
     ordem_a_star, risco_a_star = a_star.otimizar_fila(
         lista_pacientes.copy(),

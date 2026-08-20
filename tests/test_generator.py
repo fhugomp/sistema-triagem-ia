@@ -1,6 +1,6 @@
 import pytest
-import pandas as pd
 from src.data.generator import GeradorPacientesSinteticos
+from src.models.paciente import Paciente
 
 
 @pytest.fixture
@@ -12,36 +12,32 @@ def gerador() -> GeradorPacientesSinteticos:
 def test_tamanho_e_colunas_dataframe(gerador: GeradorPacientesSinteticos) -> None:
     """Garante que a base sintética atende aos requisitos de tamanho e estrutura."""
     num_pacientes = 50
-    df = gerador.gerar_pacientes(num_pacientes)
+    pacientes = gerador.gerar_pacientes(num_pacientes)
 
-    assert isinstance(df, pd.DataFrame)
-    assert len(df) == num_pacientes
-
-    colunas_esperadas = [
-        "ID_Paciente",
-        "Idade_Anos",
-        "IdadeAvancada",
-        "DoencaCronica",
-        "SaturacaoO2",
-        "FrequenciaCardiaca",
-        "NivelDor",
-        "Febre",
-        "TempoEspera_Inicial_Minutos",
-    ]
-    assert list(df.columns) == colunas_esperadas
+    assert isinstance(pacientes, list)
+    assert len(pacientes) == num_pacientes
+    assert isinstance(pacientes[0], Paciente)
+    
+    p = pacientes[0]
+    assert hasattr(p, "id_paciente")
+    assert hasattr(p, "idade_anos")
+    assert hasattr(p, "idade_avancada")
+    assert hasattr(p, "doenca_cronica")
+    assert hasattr(p, "saturacao_o2")
+    assert hasattr(p, "frequencia_cardiaca")
+    assert hasattr(p, "nivel_dor")
+    assert hasattr(p, "febre")
+    assert hasattr(p, "tempo_espera_inicial_minutos")
 
 
 def test_compatibilidade_com_rede_bayesiana(
     gerador: GeradorPacientesSinteticos,
 ) -> None:
     """
-    Garante que as strings geradas pelo Pandas são exatamentes as mesmas
-    exigidas pelas variáveis da nossa Rede Bayesiana.
+    Garante que os pacientes gerados podem ser instanciados sem ValidationError
+    (Pydantic Literal validation já cobre a compatibilidade).
     """
-    df = gerador.gerar_pacientes(10)
-
-    assert set(df["IdadeAvancada"].unique()).issubset({"Falso", "Verdadeiro"})
-    assert set(df["SaturacaoO2"].unique()).issubset({"Normal", "Baixa"})
-    assert set(df["FrequenciaCardiaca"].unique()).issubset({"Normal", "Alta"})
-    assert set(df["NivelDor"].unique()).issubset({"Leve", "Intensa"})
-    assert set(df["Febre"].unique()).issubset({"Ausente", "Presente"})
+    # A simples execução sem exceção já é o teste de compatibilidade
+    # pois o Pydantic validará os Literals de cada Paciente gerado.
+    pacientes = gerador.gerar_pacientes(10)
+    assert len(pacientes) == 10

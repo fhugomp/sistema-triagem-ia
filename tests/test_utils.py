@@ -3,6 +3,7 @@ from src.utils import (
     gerar_dataframe_auditoria,
     preparar_dados_perfil_clinico,
 )
+from src.models.paciente import Paciente
 
 
 def test_preparar_dados_grafico_estrutura() -> None:
@@ -39,9 +40,21 @@ def test_gerar_dataframe_auditoria_ordenacao() -> None:
     aplica a permutação correta sem corromper os dados dos pacientes.
     """
     pacientes_mock = [
-        {"ID_Paciente": 101, "Risco": 10, "Nome": "A"},
-        {"ID_Paciente": 102, "Risco": 50, "Nome": "B"},
-        {"ID_Paciente": 103, "Risco": 90, "Nome": "C"},
+        Paciente(
+            id_paciente=101, idade_anos=30, idade_avancada="Falso", doenca_cronica="Falso",
+            saturacao_o2="Normal", frequencia_cardiaca="Normal", nivel_dor="Leve", febre="Ausente",
+            tempo_espera_inicial_minutos=10, probabilidade_alta=0.1
+        ),
+        Paciente(
+            id_paciente=102, idade_anos=30, idade_avancada="Falso", doenca_cronica="Falso",
+            saturacao_o2="Normal", frequencia_cardiaca="Normal", nivel_dor="Leve", febre="Ausente",
+            tempo_espera_inicial_minutos=50, probabilidade_alta=0.5
+        ),
+        Paciente(
+            id_paciente=103, idade_anos=30, idade_avancada="Falso", doenca_cronica="Falso",
+            saturacao_o2="Normal", frequencia_cardiaca="Normal", nivel_dor="Leve", febre="Ausente",
+            tempo_espera_inicial_minutos=90, probabilidade_alta=0.9
+        ),
     ]
     ordem_calculada = [103, 101, 102]
 
@@ -51,9 +64,6 @@ def test_gerar_dataframe_auditoria_ordenacao() -> None:
     assert (
         df_audit.iloc[0]["ID_Paciente"] == 103
     ), "Falha de ordenação posicional (Índice 0)."
-    assert (
-        df_audit.iloc[0]["Nome"] == "C"
-    ), "Falha de integridade dos dados na transposição."
     assert (
         df_audit.iloc[-1]["ID_Paciente"] == 102
     ), "Falha de ordenação posicional (Índice N)."
@@ -65,9 +75,21 @@ def test_preparar_dados_perfil_clinico() -> None:
     para o gráfico de distribuição diagnóstica da Rede Bayesiana.
     """
     pacientes_mock = [
-        {"ID_Paciente": 1, "Probabilidade_Alta": 0.10},  # Deve ser Baixo Risco
-        {"ID_Paciente": 2, "Probabilidade_Alta": 0.50},  # Deve ser Risco Moderado
-        {"ID_Paciente": 3, "Probabilidade_Alta": 0.90},  # Deve ser Alto Risco
+        Paciente(
+            id_paciente=1, idade_anos=30, idade_avancada="Falso", doenca_cronica="Falso",
+            saturacao_o2="Normal", frequencia_cardiaca="Normal", nivel_dor="Leve", febre="Ausente",
+            tempo_espera_inicial_minutos=10, probabilidade_alta=0.10  # Deve ser Baixo Risco
+        ),
+        Paciente(
+            id_paciente=2, idade_anos=30, idade_avancada="Falso", doenca_cronica="Falso",
+            saturacao_o2="Normal", frequencia_cardiaca="Normal", nivel_dor="Leve", febre="Ausente",
+            tempo_espera_inicial_minutos=10, probabilidade_alta=0.50  # Deve ser Risco Moderado
+        ),
+        Paciente(
+            id_paciente=3, idade_anos=30, idade_avancada="Falso", doenca_cronica="Falso",
+            saturacao_o2="Normal", frequencia_cardiaca="Normal", nivel_dor="Leve", febre="Ausente",
+            tempo_espera_inicial_minutos=10, probabilidade_alta=0.90  # Deve ser Alto Risco
+        ),
     ]
 
     df_perfil = preparar_dados_perfil_clinico(pacientes_mock)

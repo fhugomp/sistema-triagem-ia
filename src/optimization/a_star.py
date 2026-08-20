@@ -1,13 +1,14 @@
 import heapq
-import math
-from typing import List, Tuple, Dict, Any, Literal
+from typing import List, Tuple, Literal
 from src import config
+from src.optimization.risk import calcular_risco
+from src.models.paciente import Paciente
 
 
 class NoFila:
     def __init__(
         self,
-        pacientes_restantes: List[Dict[str, Any]],
+        pacientes_restantes: List[Paciente],
         risco_acumulado_g: float,
         ordem_atendimento: List[int],
         tempo_atual: int,
@@ -25,13 +26,10 @@ class NoFila:
     def calcular_heuristica(self) -> float:
         risco_h = 0.0
         for p in self.pacientes_restantes:
-            tempo_espera_total = self.tempo_atual + p["TempoEspera_Inicial_Minutos"]
-            if self.tipo_funcao == "exponencial":
-                risco_h += p["Probabilidade_Alta"] * math.exp(
-                    tempo_espera_total / config.TAU_EXPONENCIAL
-                )
-            else:
-                risco_h += p["Probabilidade_Alta"] * tempo_espera_total
+            tempo_espera_total = self.tempo_atual + p.tempo_espera_inicial_minutos
+            risco_h += calcular_risco(
+                p.probabilidade_alta, tempo_espera_total, self.tipo_funcao
+            )
         return risco_h
 
     def __lt__(self, other: "NoFila") -> bool:
@@ -50,13 +48,11 @@ class OtimizadorTriagemAStar:
         tempo_espera: int,
         tipo_funcao: Literal["linear", "exponencial"] = "linear",
     ) -> float:
-        if tipo_funcao == "exponencial":
-            return prob_alta * math.exp(tempo_espera / config.TAU_EXPONENCIAL)
-        return prob_alta * tempo_espera
+        return calcular_risco(prob_alta, tempo_espera, tipo_funcao)
 
     def otimizar_fila(
         self,
-        pacientes: List[Dict[str, Any]],
+        pacientes: List[Paciente],
         tamanho_janela: int = config.TAMANHO_JANELA_A_STAR,
         tipo_funcao: Literal["linear", "exponencial"] = "linear",
         estrategia_particionamento: Literal["fifo", "risco_inicial"] = "fifo",
@@ -72,15 +68,15 @@ class OtimizadorTriagemAStar:
             pacientes_ordenados = sorted(
                 pacientes,
                 key=lambda x: self.calcular_risco_paciente(
-                    x["Probabilidade_Alta"],
-                    x["TempoEspera_Inicial_Minutos"],
+                    x.probabilidade_alta,
+                    x.tempo_espera_inicial_minutos,
                     tipo_funcao,
                 ),
                 reverse=True,
             )
         else:
             pacientes_ordenados = sorted(
-                pacientes, key=lambda x: x["TempoEspera_Inicial_Minutos"], reverse=True
+                pacientes, key=lambda x: x.tempo_espera_inicial_minutos, reverse=True
             )
 
         ordem_final_global: List[int] = []
@@ -88,7 +84,7 @@ class OtimizadorTriagemAStar:
         tempo_acumulado = 0
 
         for i in range(0, len(pacientes_ordenados), janela_efetiva):
-            lote = [p.copy() for p in pacientes_ordenados[i : i + janela_efetiva]]
+            lote = [p.model_copy() for p in pacientes_ordenados[i : i + janela_efetiva]]
 
             no_inicial = NoFila(
                 lote,
@@ -111,16 +107,16 @@ class OtimizadorTriagemAStar:
 
                 for j, paciente in enumerate(no_atual.pacientes_restantes):
                     tempo_espera_real = (
-                        no_atual.tempo_atual + paciente["TempoEspera_Inicial_Minutos"]
+                        no_atual.tempo_atual + paciente.tempo_espera_inicial_minutos
                     )
                     risco_atendimento = self.calcular_risco_paciente(
-                        paciente["Probabilidade_Alta"], tempo_espera_real, tipo_funcao
+                        paciente.probabilidade_alta, tempo_espera_real, tipo_funcao
                     )
 
                     novo_risco_g = no_atual.risco_acumulado_g + risco_atendimento
                     novos_restantes = no_atual.pacientes_restantes.copy()
                     novos_restantes.pop(j)
-                    nova_ordem = no_atual.ordem_atendimento + [paciente["ID_Paciente"]]
+                    nova_ordem = no_atual.ordem_atendimento + [paciente.id_paciente]
                     novo_tempo = no_atual.tempo_atual + self.tempo_atendimento
 
                     novo_no = NoFila(
