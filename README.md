@@ -1,118 +1,222 @@
-# Sistema Inteligente de Triagem Hospitalar
+# TRIAGE.AI — Intelligent Clinical Queue Optimization
 
 [![Streamlit App](https://img.shields.io/badge/Streamlit-Demo-red?logo=streamlit)](https://sistemadetriagem.streamlit.app/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://www.python.org/)
+[![Pydantic](https://img.shields.io/badge/Pydantic-v2-green)](https://docs.pydantic.dev/)
+[![Versao](https://img.shields.io/badge/Versao-2.0-8B5CF6)](https://github.com/fhugomp/sistema-triagem-ia)
 
-Este repositório documenta a implementação de um simulador de triagem médica baseado em Inteligência Artificial. O sistema propõe uma arquitetura computacional híbrida, integrando raciocínio probabilístico sob incerteza e otimização heurística, com o objetivo de mitigar o impacto da superlotação em prontos-socorros.
+Plataforma experimental de simulacao de triagem medica baseada em Inteligencia Artificial.
+A versao 2.0 entrega uma interface **Dark Mode Premium** com suporte a internacionalizacao
+(PT-BR / EN), visualizacao em streaming frame-a-frame e arquitetura de backend rigorosamente
+tipada com Pydantic.
 
-## Demonstração Online
+## Demonstracao Online
 
-A aplicação encontra-se disponível para execução diretamente no navegador através do Streamlit Cloud:
-> **Nota: Caso a aplicação esteja em modo de espera (inativa), basta clicar no botão "Yes, get this app back up!" na tela para que o Streamlit a reative automaticamente.**
+> **Nota:** Caso a aplicacao esteja em modo de espera, clique em "Yes, get this app back up!" para reativa-la.
 
 > https://sistemadetriagem.streamlit.app/
 
-![Dashboard de Triagem](docs/sistemadetriagem_capa.png)
+---
 
-## 1. Arquitetura do Sistema
+## 1. Interface Multi-page (v2.0)
 
-A solução é composta por módulos de *Backend* matemático orquestrados por uma interface gráfica analítica (Dashboard) desenvolvida no framework `Streamlit`:
+A aplicacao e estruturada em tres paginas independentes com navegacao pela sidebar do Streamlit:
 
-### 1.1. Inferência Bayesiana Diagnóstica (Modelagem Preditiva)
-Implementada sob a biblioteca `pgmpy`, a rede bayesiana estima a probabilidade de um paciente apresentar quadro clínico de gravidade Alta, dadas as evidências sintomatológicas observadas (Idade Avançada, Doença Crônica, Saturação de O2, Frequência Cardíaca, Nível de Dor e Febre). O nó Gravidade é condicionado por seis evidências binárias, resultando em uma Tabela de Probabilidade Condicional (CPT) com 64 combinações possíveis de estados. A inferência é processada através do algoritmo exato *Variable Elimination*, otimizado por uma camada de *memoization* que reduz consultas repetidas para um tempo de acesso médio $\mathcal{O}(1)$.
+| Pagina | Arquivo | Conteudo |
+|--------|---------|----------|
+| Overview | `main.py` | Hero section, cards de arquitetura, metricas tecnicas |
+| Simulation | `pages/2_Simulation.py` | Experiment Setup centralizado, streaming A*, patient cards |
+| Methodology | `pages/3_Methodology.py` | Grafo causal interativo, formulas matematicas, Protocolo de Manchester |
 
-### 1.2. Motor de Busca Heurística (Algoritmo A*)
-Responsável por formular a ordenação de atendimento como um problema de minimização de risco clínico global. Para demonstrar o domínio sobre o *trade-off* de escalabilidade computacional, o motor oferece duas modalidades de execução:
+### Dark Mode Premium
 
-* **A* Global (Busca Completa):** Explora o espaço de estados completo. Para evitar o travamento do sistema devido à complexidade fatorial $\mathcal{O}(N!)$, possui uma trava estrutural de segurança limitando a execução a amostras pequenas ($N \le 8$). Nesta modalidade, lidando com um espaço de permutação de até $40.320$ estados, o algoritmo permite validar empiricamente a busca por soluções ótimas.
-* **A* Particionado (*Sliding Window*):** Para contornar a explosão combinatória em filas extensas ($N > 8$), o sistema aplica o método de particionamento do espaço de estados. A complexidade é mitigada para aproximadamente $\mathcal{O}(\lceil N/k \rceil \times k!)$ através do processamento independente de lotes de tamanho $k=8$. Para mitigar a "miopia de lote" introduzida por essa divisão, o algoritmo utiliza nativamente o agrupamento baseado no **Risco Inicial**.
+O tema e definido em `.streamlit/config.toml` com a paleta SaaS/Cientifica:
 
-### 1.3. Configurações Experimentais
-O simulador atua como um laboratório de provas interativo, permitindo parametrizar o modelo de deterioração clínica que guia a função de custo do algoritmo:
-
-* **Risco Linear:** $f(t) = P(Alta) \times t$
-* **Risco Exponencial:** $f(t) = P(Alta) \times e^{t/\tau}$ (onde $\tau = 60$ minutos, modelando a escalada temporal de deterioração crítica).
-
-### 1.4. Painel Analítico e Auditoria
-A camada de apresentação conta com a biblioteca `plotly` para visualização de dados em padrão acadêmico e industrial:
-* **Perfil Clínico (Input):** Histograma de distribuição diagnóstica mapeando o volume de pacientes gerados pela Rede Bayesiana por categoria de risco.
-* **Comparativo de Risco (Output):** Contraste visual explícito entre a inércia estrutural (FIFO), o limite puramente local (Heurística Gulosa) e o motor de otimização A*.
-* **Auditoria:** Exportação nativa das matrizes de permutação (.csv) e tabelas de *logs* transacionais para validação em *softwares* estatísticos de terceiros.
-
-## 2. Requisitos de Ambiente
-
-A execução do sistema requer o seguinte ambiente de desenvolvimento configurado:
-* Python 3.12 ou superior
-* Poetry (Gerenciamento de dependências e ambientes virtuais)
-* Make (Automação de rotinas de validação)
-
-## 3. Instruções de Instalação e Execução
-
-1. Realize a clonagem do repositório localmente:
-```bash
-git clone https://github.com/fhugomp/sistema-triagem-ia.git
+```toml
+[theme]
+primaryColor            = "#8B5CF6"   # Violeta — acento principal
+backgroundColor         = "#080A0F"   # Azul-marinho profundo
+secondaryBackgroundColor = "#10131A"  # Superficie de cards
+textColor               = "#F5F7FA"   # Branco suave
 ```
 
-2. Abra a pasta do projeto:
-```bash
-cd sistema-triagem-ia
+A tipografia **Inter** (Google Fonts) e injetada via CSS global em todos os componentes.
+
+### Internacionalizacao (i18n)
+
+Todos os textos da interface estao centralizados em `src/ui/i18n.py` no dicionario
+`TRANSLATIONS`. Um toggle discreto **PT / EN** na barra de navegacao superior usa
+`st.session_state` para persistir a selecao de idioma entre navegacoes de pagina.
+
+```python
+# Uso em qualquer pagina
+if "lang" not in st.session_state:
+    st.session_state["lang"] = "pt"
+lang = st.session_state["lang"]
+t    = get_t(lang)                   # dicionario de strings localizado
 ```
 
-3. Instale as dependências via Poetry:
+---
+
+## 2. Arquitetura do Backend
+
+### 2.1. Tipagem Estrita com Pydantic
+
+Toda a camada de dados e fundamentada em modelos Pydantic `frozen=True` garantindo
+imutabilidade ao longo de todo o pipeline:
+
+```python
+class Paciente(BaseModel):
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
+    id_paciente:       int   = Field(alias="ID_Paciente", ge=1)
+    probabilidade_alta: float = Field(alias="Probabilidade_Alta",
+                                       default=0.0, ge=0.0, le=1.0)
+```
+
+O dataclass `ResultadoSimulacao` encapsula todos os resultados, incluindo os KPIs de BI:
+
+```python
+@dataclass
+class ResultadoSimulacao:
+    lista_pacientes: List[Paciente]
+    ordem_a_star:    List[int]
+    risco_a_star:    float
+    # KPIs v2.0
+    tempo_execucao_segundos:          float
+    nos_explorados_a_star:            int
+    tempo_medio_espera_por_estrategia: Dict[str, float]
+```
+
+### 2.2. Rede Bayesiana Diagnostica
+
+Grafo causal com 7 nos e 9 arcos, inferencia exata por Variable Elimination:
+
+```
+IdadeAvancada  ──────────────────────────────────────────┐
+     |                                                   |
+     v                                                   v
+DoencaCronica ──────────────────────────────────────> Gravidade
+     |                                                   ^
+     v                                                   |
+SaturacaoO2 ───────────────────────────────────────────┘ |
+                                                         |
+Febre ──────> FrequenciaCardiaca ────────────────────────┤
+  └──────────────────────────────────────────────────────┤
+                                                         |
+NivelDor ────────────────────────────────────────────────┘
+```
+
+O no `Gravidade` possui 6 pais binarios, gerando CPT com 2^6 = 64 combinacoes.
+Cache por hash de evidencias reduz consultas repetidas para O(1).
+
+### 2.3. Protocolo de Manchester
+
+Mapeamento de probabilidade continua de saida da RBN para 5 categorias clinicas:
+
+| Faixa | Categoria | Cor |
+|-------|-----------|-----|
+| [0,00 — 0,20) | Nao Urgente | Azul (`#3b82f6`) |
+| [0,20 — 0,40) | Pouco Urgente | Verde (`#10b981`) |
+| [0,40 — 0,60) | Urgente | Amarelo (`#f59e0b`) |
+| [0,60 — 0,80) | Muito Urgente | Laranja (`#f97316`) |
+| [0,80 — 1,00] | Emergencia | Vermelho (`#ef4444`) |
+
+### 2.4. Algoritmo A* e Streaming
+
+O motor otimizador oferece dois modos de execucao:
+
+- **A* Global**: Espaco completo de estados. Limitado a N <= 8 (complexidade O(N!)).
+- **A* Particionado (Sliding Window)**: Complexidade reduzida para O(ceil(N/k) * k!),
+  com k = 8.
+
+O metodo `otimizar_fila_streaming()` e um **generator Python** que faz `yield` de um
+snapshot da fila otimizada apos cada lote processado. A pagina Simulation consome esse
+generator para atualizar os cards e graficos frame a frame com `st.empty()`.
+
+---
+
+## 3. KPIs de Business Intelligence (v2.0)
+
+| KPI | Descricao |
+|-----|-----------|
+| Tempo de Execucao | Wall-clock do pipeline completo (ms) |
+| Nos Explorados (A*) | Soma das expansoes do heap em todos os lotes |
+| Espera Media — FIFO | Tempo medio de espera acumulado por paciente no FIFO |
+| Espera Media — A* | Tempo medio de espera acumulado por paciente no A* |
+
+---
+
+## 4. Requisitos e Instalacao
+
+**Requisitos:** Python 3.10+, Poetry, Make.
+
 ```bash
+# 1. Clonar
+git clone https://github.com/fhugomp/sistema-triagem-ia.git && cd sistema-triagem-ia
+
+# 2. Instalar
 poetry install
-```
 
-4. Inicialize a interface de simulação:
-```bash
+# 3. Executar
 make run
 ```
 
-## 4. Validação e Qualidade de Software
+---
 
-A base de código é submetida a uma esteira rigorosa de validação, englobando testes lógicos unitários (Pytest), análise estática de tipagem (Mypy) e formatação padronizada (Ruff).
-
-Para executar a suíte de testes lógicos de forma isolada:
+## 5. Validacao e Qualidade
 
 ```bash
-make test
+make test       # suíte de testes (pytest)
+make check-all  # lint + tipos + testes
 ```
 
-Para executar a esteira de validação e verificação completa:
+### Cobertura de Testes
 
-```bash
-make check-all
-```
+| Modulo | Cobertura |
+|--------|-----------|
+| `test_a_star.py` | Heuristica, heapq, nos explorados |
+| `test_bayesian_net.py` | Inferencia, cache, estados |
+| `test_generator.py` | Geracao de dados sinteticos |
+| `test_paciente.py` | Validacao Pydantic, imutabilidade |
+| `test_simulator.py` | Pipeline completo, comparativo |
+| `test_runner_kpis.py` | KPIs de BI (tempo, nos, espera) |
+| `test_manchester.py` | Mapeamento de cores e categorias |
+| `test_utils.py` | Formatacao de DataFrames |
 
-## 5. Estrutura do Repositório
+---
+
+## 6. Estrutura do Repositorio
 
 ```text
 sistema-triagem-ia/
-├── docs/
+├── .streamlit/
+│   └── config.toml             # Tema Dark Premium
+├── pages/
+│   ├── 2_Simulation.py         # Dashboard com streaming
+│   └── 3_Methodology.py        # Whitepaper tecnico
 ├── src/
-│   ├── data/
-│   ├── models/
-│   ├── optimization/
 │   ├── config.py
-├── tests/
+│   ├── utils.py
+│   ├── data/generator.py
+│   ├── models/
+│   │   ├── paciente.py         # Pydantic frozen model
+│   │   └── bayesian_net.py     # Rede Bayesiana (pgmpy)
+│   ├── optimization/
+│   │   ├── a_star.py           # A* + streaming generator
+│   │   ├── baselines.py
+│   │   └── risk.py
+│   ├── simulation/runner.py    # Pipeline + KPIs + streaming
+│   └── ui/
+│       ├── components.py       # Renderizacao + Manchester + cards
+│       └── i18n.py             # Dicionario PT-BR / EN
+├── tests/                      # 43 testes — 100% passing
+├── main.py                     # Overview / Landing
 ├── pyproject.toml
-├── Makefile
-└── README.md
-└── main.py
+└── Makefile
 ```
 
-### Principais Componentes
-```text
-bayesian_net.py  -  Inferência probabilística
-a_star.py        -  Busca heurística
-baselines.py     -  Estratégias FIFO e Gulosa
-generator.py     -  Geração de pacientes sintéticos
-main.py          -  Interface Streamlit
-```
+---
 
-## 6. Considerações Metodológicas e Conclusões
-
-O presente simulador constitui um ambiente experimental robusto para a validação algorítmica de escalonamento sob incerteza. 
-
-Experimentos conduzidos na plataforma demonstraram que, sob uma métrica de progressão linear de risco, algoritmos de tempo polinomial $\mathcal{O}(N)$ (Heurística Gulosa) são suficientes para aproximar soluções satisfatórias. Contudo, em cenários representativos de superlotação ($N=100$) avaliados sob **penalidade exponencial** — refletindo o rápido agravamento de quadros clínicos críticos —, estratégias gulosas puramente locais sofrem degradação acentuada. Neste contexto, o **A* Particionado demonstrou superioridade algorítmica**, reduzindo o risco acumulado global em mais de 50%, evidenciando sua eficácia no balanceamento entre criticidade absoluta inicial e latência progressiva de fila.
-
-Nota: Os resultados baseiam-se em dados gerados estocasticamente. Trabalhos futuros devem englobar validações clínicas com bases de pacientes reais para a calibração de hiperparâmetros (como o fator $\tau$) e a inferência das Tabelas de Probabilidade Condicional.
+*Desenvolvido por Hugo Mendes — [GitHub](https://github.com/fhugomp) |
+[LinkedIn](https://linkedin.com/in/fhugomp) |
+[Portfolio](https://fhugomp.github.io)*
