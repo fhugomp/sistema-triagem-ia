@@ -1,107 +1,132 @@
-import streamlit as st
-from typing import cast, Literal
+"""
+Entrypoint principal — TRIAGE.AI Overview.
+Apresenta o sistema, sua arquitetura e direciona para os modulos.
+"""
 
-import src.config as config
-from src.data.generator import GeradorPacientesSinteticos
-from src.models.bayesian_net import SistemaTriagemBayesiana
-from src.optimization.a_star import OtimizadorTriagemAStar
-from src.optimization.baselines import BaselinesTriagem
-from src.simulation.runner import executar_simulacao
-from src.ui.components import renderizar_resultados, renderizar_rodape
+import streamlit as st
+
+from src.ui.components import injetar_css_global, renderizar_navbar, renderizar_rodape
+from src.ui.i18n import get_t
 
 st.set_page_config(
-    page_title="Simulador de Triagem - IA",
+    page_title="TRIAGE.AI",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
-st.title("Sistema Inteligente de Triagem Hospitalar")
-st.markdown("### Otimização de Filas Baseada em Redes Bayesianas e Algoritmo A*")
-st.markdown("---")
+injetar_css_global()
 
-with st.expander("Sobre a Metodologia e Modelagem", expanded=False):
-    st.markdown(
-        """
-    **Resumo:** Este simulador apresenta uma modelagem preditiva e prescritiva para o fluxo de atendimento em prontos-socorros. 
-    O sistema soluciona o problema da superlotação através de dois módulos acoplados:
-    1. **Inferência de Risco (Rede Bayesiana):** Estima a probabilidade de um paciente possuir gravidade clínica *Alta* dadas as evidências parciais (sintomas e sinais vitais).
-    2. **Otimização Combinatória (Algoritmo A-Star):** Minimiza o risco acumulado global da fila, utilizando uma função de custo baseada na probabilidade de deterioração e no tempo de espera latente.
-    """
+if "lang" not in st.session_state:
+    st.session_state["lang"] = "pt"
+lang = st.session_state["lang"]
+t = get_t(lang)
+
+renderizar_navbar(t, lang)
+
+# ---------------------------------------------------------------------------
+# Hero Section
+# ---------------------------------------------------------------------------
+
+# Build hero title — replace \n with <br> for HTML rendering
+_hero_lines = t["hero_title"].replace("\n", "<br>")
+
+st.markdown(
+    f"""
+    <div style="text-align:center; padding: 48px 0 40px 0;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:3px;
+                    color:#8b5cf6; text-transform:uppercase; margin-bottom:18px;
+                    font-family:'Inter',sans-serif;">
+            &#9672; TRIAGE.AI
+        </div>
+        <h1 style="font-size:50px; font-weight:700; letter-spacing:-1.5px;
+                   color:#F5F7FA; margin:0 0 18px 0; line-height:1.08;
+                   font-family:'Inter',sans-serif;">
+            {_hero_lines}
+        </h1>
+        <p style="font-size:18px; color:#8b93a7; font-weight:300;
+                  max-width:540px; margin:0 auto; font-family:'Inter',sans-serif;">
+            {t["overview_hero_sub"]}
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# CTA button — uses st.page_link for native Streamlit navigation
+_, col_cta, _ = st.columns([3, 2, 3])
+with col_cta:
+    st.markdown('<div class="hero-btn">', unsafe_allow_html=True)
+    st.page_link(
+        "pages/2_Simulation.py",
+        label=t["hero_cta"],
+        use_container_width=True,
     )
+    st.markdown('</div>', unsafe_allow_html=True)
 
-
-@st.cache_resource
-def inicializar_sistema():
-    rbn = SistemaTriagemBayesiana()
-    a_star = OtimizadorTriagemAStar(
-        tempo_atendimento_minutos=config.TEMPO_ATENDIMENTO_MINUTOS
-    )
-    baselines = BaselinesTriagem(
-        tempo_atendimento_minutos=config.TEMPO_ATENDIMENTO_MINUTOS
-    )
-    return rbn, a_star, baselines
-
-
-rbn, a_star, baselines = inicializar_sistema()
-gerador = GeradorPacientesSinteticos(seed=None)
-
-# Barra Lateral (Painel de Controle)
-st.sidebar.markdown("### Configurações da Simulação")
-num_pacientes = st.sidebar.slider(
-    "Tamanho da Amostra (Pacientes)",
-    min_value=config.SLIDER_MIN_PACIENTES,
-    max_value=config.SLIDER_MAX_PACIENTES,
-    value=config.SLIDER_DEFAULT_PACIENTES,
-    step=1,
+st.markdown(
+    '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.07);margin:20px 0 40px 0;">',
+    unsafe_allow_html=True,
 )
 
-st.sidebar.markdown("### Modelo de Deterioração Clínica")
-tipo_funcao_selecionada = st.sidebar.radio(
-    "Selecione a Função de Risco:",
-    options=["Linear", "Exponencial"],
-    help="Linear: Risco cresce proporcionalmente ao tempo. Exponencial: Simula quadros críticos que escalam rapidamente.",
+# ---------------------------------------------------------------------------
+# Architecture cards
+# ---------------------------------------------------------------------------
+
+st.markdown(
+    f'<div class="section-label">{t["overview_arch_header"]}</div>',
+    unsafe_allow_html=True,
 )
 
-tipo_funcao = cast(
-    Literal["linear", "exponencial"], tipo_funcao_selecionada.lower()
-)
+col1, col2, col3 = st.columns(3, gap="medium")
+_cards = [
+    ("mod_01_num", "mod_01_title", "mod_01_desc"),
+    ("mod_02_num", "mod_02_title", "mod_02_desc"),
+    ("mod_03_num", "mod_03_title", "mod_03_desc"),
+]
 
-st.sidebar.markdown("### Motor Otimizador (Algoritmo A*)")
-modo_a_star = st.sidebar.radio(
-    "Modo de Execução:",
-    options=["A* Global (Ótimo Matemático)", "A* Particionado (Sliding Window)"],
-    help="Global: Explora todo o espaço de estados simultaneamente. Particionado: Utiliza lotes para mitigar a explosão combinatória.",
-)
-usar_janela = modo_a_star == "A* Particionado (Sliding Window)"
-
-# Se o usuário escolheu particionado, ele pode escolher a heurística do lote
-estrategia_part: Literal["fifo", "risco_inicial"] = "risco_inicial"
-
-# Disjuntor de Segurança para Explosão Combinatória
-bloquear_execucao = False
-if not usar_janela and num_pacientes > 8:
-    st.sidebar.error(
-        "🚨 Ação Bloqueada: O A* Global explora O(N!) possibilidades. Para N > 8, o processador travaria. Reduza a amostra para 8 pacientes ou altere o modo para A* Particionado."
-    )
-    bloquear_execucao = True
-
-if st.sidebar.button(
-    "Executar Simulação de Cenário", type="primary", disabled=bloquear_execucao
-):
-    with st.spinner(
-        "Processando Inferência Probabilística e Otimização do Espaço de Estados..."
-    ):
-        resultado = executar_simulacao(
-            num_pacientes=num_pacientes,
-            tipo_funcao=tipo_funcao,
-            estrategia_particionamento=estrategia_part,
-            usar_janela=usar_janela,
-            gerador=gerador,
-            rbn=rbn,
-            a_star=a_star,
-            baselines=baselines,
+for col, (k_num, k_title, k_desc) in zip([col1, col2, col3], _cards):
+    with col:
+        st.markdown(
+            f"""
+            <div class="module-card">
+                <div class="module-number">{t[k_num]}</div>
+                <div class="module-title">{t[k_title]}</div>
+                <div class="module-desc">{t[k_desc]}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
-        renderizar_resultados(resultado)
+st.markdown(
+    '<div style="height:40px;"></div>',
+    unsafe_allow_html=True,
+)
 
-renderizar_rodape()
+# ---------------------------------------------------------------------------
+# Technical stats pills
+# ---------------------------------------------------------------------------
+
+sc1, sc2, sc3, sc4 = st.columns(4, gap="medium")
+_stats = [
+    ("7",  "hl_nodes"),
+    ("9",  "hl_arcs"),
+    ("64", "hl_cpt"),
+    ("5",  "hl_manch"),
+]
+
+for col, (value, key) in zip([sc1, sc2, sc3, sc4], _stats):
+    with col:
+        st.markdown(
+            f"""
+            <div class="stat-pill">
+                <div class="stat-value">{value}</div>
+                <div class="stat-label">{t[key]}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)
+
+renderizar_rodape(t)
+
