@@ -1,5 +1,5 @@
 import heapq
-from typing import List, Tuple, Literal
+from typing import Generator, List, Tuple, Literal
 from src import config
 from src.optimization.risk import calcular_risco
 from src.models.paciente import Paciente
@@ -57,10 +57,14 @@ class OtimizadorTriagemAStar:
         tipo_funcao: Literal["linear", "exponencial"] = "linear",
         estrategia_particionamento: Literal["fifo", "risco_inicial"] = "fifo",
         usar_janela: bool = True,
-    ) -> Tuple[List[int], float]:
+    ) -> Tuple[List[int], float, int]:
         """
         Executa o A*. Se 'usar_janela' for False, o algoritmo atuará de forma global,
-        processando a fila inteira em um único bloco matemático (restrito a filas pequenas).
+        processando a fila inteira em um único bloco matematico (restrito a filas pequenas).
+
+        Returns:
+            Tupla (ordem_atendimento, risco_total, nos_explorados) onde nos_explorados
+            e a soma de todas as expansoes do heap entre todos os lotes processados.
         """
         janela_efetiva = tamanho_janela if usar_janela else len(pacientes)
 
@@ -82,6 +86,7 @@ class OtimizadorTriagemAStar:
         ordem_final_global: List[int] = []
         risco_total_global = 0.0
         tempo_acumulado = 0
+        nos_explorados_total = 0
 
         for i in range(0, len(pacientes_ordenados), janela_efetiva):
             lote = [p.model_copy() for p in pacientes_ordenados[i : i + janela_efetiva]]
@@ -98,6 +103,7 @@ class OtimizadorTriagemAStar:
 
             while fronteira:
                 no_atual = heapq.heappop(fronteira)
+                nos_explorados_total += 1
 
                 if not no_atual.pacientes_restantes:
                     ordem_final_global.extend(no_atual.ordem_atendimento)
@@ -128,4 +134,88 @@ class OtimizadorTriagemAStar:
                     )
                     heapq.heappush(fronteira, novo_no)
 
-        return ordem_final_global, risco_total_global
+        return ordem_final_global, risco_total_global, nos_explorados_total
+
+    def otimizar_fila_streaming(
+        self,
+        pacientes: List[Paciente],
+        tamanho_janela: int = config.TAMANHO_JANELA_A_STAR,
+        tipo_funcao: Literal["linear", "exponencial"] = "linear",
+        estrategia_particionamento: Literal["fifo", "risco_inicial"] = "fifo",
+        usar_janela: bool = True,
+    ) -> Generator[Tuple[List[int], float, int], None, None]:
+        """Versao geradora de otimizar_fila para visualizacao em streaming.
+
+        Faz yield de (ordem_parcial, risco_parcial, nos_explorados_ate_agora)
+        apos o processamento de cada lote/janela do A*, permitindo que a interface
+        atualize os graficos frame a frame enquanto o algoritmo avanca.
+        """
+        janela_efetiva = tamanho_janela if usar_janela else len(pacientes)
+
+        if estrategia_particionamento == "risco_inicial":
+            pacientes_ordenados = sorted(
+                pacientes,
+                key=lambda x: self.calcular_risco_paciente(
+                    x.probabilidade_alta,
+                    x.tempo_espera_inicial_minutos,
+                    tipo_funcao,
+                ),
+                reverse=True,
+            )
+        else:
+            pacientes_ordenados = sorted(
+                pacientes, key=lambda x: x.tempo_espera_inicial_minutos, reverse=True
+            )
+
+        ordem_acumulada: List[int] = []
+        risco_acumulado = 0.0
+        tempo_acumulado = 0
+        nos_explorados_total = 0
+
+        for i in range(0, len(pacientes_ordenados), janela_efetiva):
+            lote = [p.model_copy() for p in pacientes_ordenados[i : i + janela_efetiva]]
+
+            no_inicial = NoFila(
+                lote,
+                risco_acumulado_g=0.0,
+                ordem_atendimento=[],
+                tempo_atual=tempo_acumulado,
+                tipo_funcao=tipo_funcao,
+            )
+            fronteira: List[NoFila] = []
+            heapq.heappush(fronteira, no_inicial)
+
+            while fronteira:
+                no_atual = heapq.heappop(fronteira)
+                nos_explorados_total += 1
+
+                if not no_atual.pacientes_restantes:
+                    ordem_acumulada.extend(no_atual.ordem_atendimento)
+                    risco_acumulado += no_atual.risco_acumulado_g
+                    tempo_acumulado = no_atual.tempo_atual
+                    break
+
+                for j, paciente in enumerate(no_atual.pacientes_restantes):
+                    tempo_espera_real = (
+                        no_atual.tempo_atual + paciente.tempo_espera_inicial_minutos
+                    )
+                    risco_atendimento = self.calcular_risco_paciente(
+                        paciente.probabilidade_alta, tempo_espera_real, tipo_funcao
+                    )
+
+                    novo_risco_g = no_atual.risco_acumulado_g + risco_atendimento
+                    novos_restantes = no_atual.pacientes_restantes.copy()
+                    novos_restantes.pop(j)
+                    nova_ordem = no_atual.ordem_atendimento + [paciente.id_paciente]
+                    novo_tempo = no_atual.tempo_atual + self.tempo_atendimento
+
+                    novo_no = NoFila(
+                        novos_restantes,
+                        novo_risco_g,
+                        nova_ordem,
+                        novo_tempo,
+                        tipo_funcao,
+                    )
+                    heapq.heappush(fronteira, novo_no)
+
+            yield ordem_acumulada.copy(), risco_acumulado, nos_explorados_total

@@ -96,9 +96,10 @@ def test_a_star_esvazia_fila(
     otimizador: OtimizadorTriagemAStar, pacientes_mock: list[Paciente]
 ) -> None:
     """Garante que o A* atende todos os pacientes e retorna uma ordem completa."""
-    ordem, risco_total = otimizador.otimizar_fila(pacientes_mock)
+    ordem, risco_total, nos_explorados = otimizador.otimizar_fila(pacientes_mock)
 
     # A fila final deve conter exatamente os 3 pacientes iniciais
     assert len(ordem) == 3
     assert set(ordem) == {1, 2, 3}
     assert risco_total > 0.0
+    assert nos_explorados >= 0, "O contador de nos explorados nao pode ser negativo."

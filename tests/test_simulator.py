@@ -47,7 +47,7 @@ def test_hard_flag_comparativo_estrategias(
         lista_pacientes.append(p.model_copy(update={"probabilidade_alta": prob_alta}))
 
     _, risco_fifo = baselines.simular_fifo(lista_pacientes.copy(), tipo_funcao="linear")
-    _, risco_a_star = a_star.otimizar_fila(
+    _, risco_a_star, _ = a_star.otimizar_fila(
         lista_pacientes.copy(),
         tipo_funcao="linear",
         usar_janela=True,
@@ -81,7 +81,7 @@ def test_prova_otimalidade_a_star_global(
     _, risco_gulosa = baselines.simular_gulosa(
         lista_pacientes.copy(), tipo_funcao="linear"
     )
-    _, risco_a_star_global = a_star.otimizar_fila(
+    _, risco_a_star_global, _ = a_star.otimizar_fila(
         lista_pacientes.copy(), tipo_funcao="linear", usar_janela=False
     )
 
@@ -107,7 +107,7 @@ def test_cobertura_heuristica_risco_inicial(
         for p in pacientes
     ]
 
-    ordem_a_star, risco_a_star = a_star.otimizar_fila(
+    ordem_a_star, risco_a_star, _ = a_star.otimizar_fila(
         lista_pacientes.copy(),
         tipo_funcao="linear",
         estrategia_particionamento="risco_inicial",
