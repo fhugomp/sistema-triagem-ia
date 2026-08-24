@@ -55,13 +55,13 @@ st.markdown(
 # CTA button — uses st.page_link for native Streamlit navigation
 _, col_cta, _ = st.columns([3, 2, 3])
 with col_cta:
-    st.markdown('<div class="hero-btn">', unsafe_allow_html=True)
+    # Marcador injetado ANTES do link para o CSS achar a coluna certa
+    st.markdown('<span class="hero-btn-marker"></span>', unsafe_allow_html=True)
     st.page_link(
         "pages/2_Simulation.py",
         label=t["hero_cta"],
         use_container_width=True,
     )
-    st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(
     '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.07);margin:20px 0 40px 0;">',

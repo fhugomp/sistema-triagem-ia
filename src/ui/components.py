@@ -181,25 +181,31 @@ CSS_GLOBAL = """
         box-shadow: none !important;
     }
 
-    /* 3. ESTILIZACAO DO BOTAO "INICIAR SIMULACAO" (Botao Hero) */
-    .hero-btn [data-testid="stPageLink"] {
-        display: flex;
-        justify-content: center;
-        margin: 0 auto;
-    }
-    
-    .hero-btn [data-testid="stPageLink"] a {
+    [data-testid="stColumn"]:has(.hero-btn-marker) [data-testid="stPageLink"] a {
         background: #F5F7FA !important;
-        color: #080A0F !important;
+        background-color: #F5F7FA !important;
+        border-radius: 6px !important;
+        padding: 12px 24px !important;
+        justify-content: center !important;
+        border: none !important;
         transition: all 0.25s ease !important;
-        white-space: nowrap !important;
     }
-
-    .hero-btn [data-testid="stPageLink"] a:hover {
+    /* Atacando a tag P interna do Streamlit para forçar a cor preta */
+    [data-testid="stColumn"]:has(.hero-btn-marker) [data-testid="stPageLink"] a p {
+        color: #080A0F !important;
+        font-weight: 700 !important;
+        white-space: nowrap !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        margin: 0 !important;
+    }
+    [data-testid="stColumn"]:has(.hero-btn-marker) [data-testid="stPageLink"] a:hover {
         background: linear-gradient(90deg, #8B5CF6, #06B6D4) !important;
-        color: #F5F7FA !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 10px 30px rgba(6, 182, 212, 0.18) !important;
+        box-shadow: 0 10px 30px rgba(6, 182, 212, 0.3) !important;
+    }
+    [data-testid="stColumn"]:has(.hero-btn-marker) [data-testid="stPageLink"] a:hover p {
+        color: #F5F7FA !important;
     }
 
     /* Queue patient cards — horizontal scroll with dynamic centering */
@@ -278,9 +284,17 @@ CSS_GLOBAL = """
         text-align: center;
     }
 
-    /* Simulation Execution Button */
-    [data-testid="stColumn"]:has(.setup-box) [data-testid="stButton"] button {
+    /* =========================================================
+       4. BOTÃO "EXECUTAR SIMULAÇÃO" (Evitar texto quebrado)
+    ========================================================= */
+    [data-testid="stColumn"]:has(.setup-label) [data-testid="stButton"] button {
+        width: 100% !important;
+    }
+    /* Forçando a tag P interna a não quebrar a linha */
+    [data-testid="stColumn"]:has(.setup-label) [data-testid="stButton"] button p {
         white-space: nowrap !important;
+        font-size: 14px !important;
+        margin: 0 !important;
     }
 
     /* Methodology page width constraint */
@@ -304,6 +318,7 @@ CSS_GLOBAL = """
     .module-number { font-size: 11px; color: #8b5cf6; font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; }
     .module-title  { font-size: 17px; font-weight: 600; color: #F5F7FA; margin-bottom: 8px; }
     .module-desc   { font-size: 14px; color: #8b93a7; line-height: 1.65; }
+
 
     /* Stats pill (Overview) */
     .stat-pill {
