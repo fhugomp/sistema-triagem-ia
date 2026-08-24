@@ -146,7 +146,7 @@ CSS_GLOBAL = """
     }
 
     /* D) Botao de Idioma (utilizando o marcador lang-btn-marker) */
-    [data-testid="stVerticalBlock"]:has(.lang-btn-marker) > div:last-child {
+    [data-testid="stColumn"]:has(.lang-btn-marker) [data-testid="stVerticalBlock"] > div:last-child {
         display: flex;
         justify-content: flex-end;
         align-items: center;
