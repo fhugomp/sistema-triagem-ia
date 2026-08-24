@@ -45,9 +45,9 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
         "hero_cta": "Iniciar Simulacao",
 
         # --- Navbar ---
-        "nav_overview":    "Overview",
-        "nav_simulation":  "Simulation",
-        "nav_methodology": "Methodology",
+        "nav_overview":    "Visão Geral",
+        "nav_simulation":  "Simulação",
+        "nav_methodology": "Metodologia",
         "nav_hint": "Navegue pelos modulos na barra de navegacao.",
 
         # --- Highlights (stats pills) ---
