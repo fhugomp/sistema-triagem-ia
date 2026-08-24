@@ -258,7 +258,8 @@ CSS_GLOBAL = """
 
     /* Bug Global de Espacamento Superior/Inferior (96px/160px) */
     [data-testid="block-container"], 
-    [data-testid="stAppViewBlockContainer"] {
+    [data-testid="stAppViewBlockContainer"],
+    [data-testid="stMainBlockContainer"] {
         padding-top: 2rem !important; /* Corrige excesso superior mantendo espaco da navbar */
         padding-bottom: 2rem !important; /* Corrige excesso inferior */
     }
