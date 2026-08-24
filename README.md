@@ -1,14 +1,28 @@
-# TRIAGE.AI — Intelligent Clinical Queue Optimization
+<div align="center">
+
+# TRIAGE.AI
+
+### Intelligent Clinical Queue Optimization
 
 [![Streamlit App](https://img.shields.io/badge/Streamlit-Demo-red?logo=streamlit)](https://sistemadetriagem.streamlit.app/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://www.python.org/)
 [![Pydantic](https://img.shields.io/badge/Pydantic-v2-green)](https://docs.pydantic.dev/)
 [![Versao](https://img.shields.io/badge/Versao-2.0-8B5CF6)](https://github.com/fhugomp/sistema-triagem-ia)
 
-Plataforma experimental de simulacao de triagem medica baseada em Inteligencia Artificial.
-A versao 2.0 entrega uma interface **Dark Mode Premium** com suporte a internacionalizacao
-(PT-BR / EN), visualizacao em streaming frame-a-frame e arquitetura de backend rigorosamente
-tipada com Pydantic.
+</div>
+
+<p align="center">
+  <img src="docs/sistemadetriagem_capa.png" alt="TRIAGE.AI" width="900">
+</p>
+
+<div align="center">
+
+Plataforma experimental de simulação de triagem médica baseada em Inteligência Artificial.
+
+A versão 2.0 entrega uma interface **Dark Mode** com suporte a internacionalização
+(PT-BR / EN), visualização em streaming frame-a-frame e arquitetura de backend rigorosamente tipada com Pydantic.
+
+</div>
 
 ## Demonstracao Online
 
@@ -22,13 +36,13 @@ tipada com Pydantic.
 
 A aplicacao e estruturada em tres paginas independentes com navegacao pela sidebar do Streamlit:
 
-| Pagina | Arquivo | Conteudo |
-|--------|---------|----------|
-| Overview | `main.py` | Hero section, cards de arquitetura, metricas tecnicas |
-| Simulation | `pages/2_Simulation.py` | Experiment Setup centralizado, streaming A*, patient cards |
+| Pagina      | Arquivo                  | Conteudo                                                               |
+| ----------- | ------------------------ | ---------------------------------------------------------------------- |
+| Overview    | `main.py`                | Hero section, cards de arquitetura, metricas tecnicas                  |
+| Simulation  | `pages/2_Simulation.py`  | Experiment Setup centralizado, streaming A\*, patient cards            |
 | Methodology | `pages/3_Methodology.py` | Grafo causal interativo, formulas matematicas, Protocolo de Manchester |
 
-### Dark Mode Premium
+### Dark Mode
 
 O tema e definido em `.streamlit/config.toml` com a paleta SaaS/Cientifica:
 
@@ -113,20 +127,20 @@ Cache por hash de evidencias reduz consultas repetidas para O(1).
 
 Mapeamento de probabilidade continua de saida da RBN para 5 categorias clinicas:
 
-| Faixa | Categoria | Cor |
-|-------|-----------|-----|
-| [0,00 — 0,20) | Nao Urgente | Azul (`#3b82f6`) |
-| [0,20 — 0,40) | Pouco Urgente | Verde (`#10b981`) |
-| [0,40 — 0,60) | Urgente | Amarelo (`#f59e0b`) |
-| [0,60 — 0,80) | Muito Urgente | Laranja (`#f97316`) |
-| [0,80 — 1,00] | Emergencia | Vermelho (`#ef4444`) |
+| Faixa         | Categoria     | Cor                  |
+| ------------- | ------------- | -------------------- |
+| [0,00 — 0,20) | Nao Urgente   | Azul (`#3b82f6`)     |
+| [0,20 — 0,40) | Pouco Urgente | Verde (`#10b981`)    |
+| [0,40 — 0,60) | Urgente       | Amarelo (`#f59e0b`)  |
+| [0,60 — 0,80) | Muito Urgente | Laranja (`#f97316`)  |
+| [0,80 — 1,00] | Emergencia    | Vermelho (`#ef4444`) |
 
-### 2.4. Algoritmo A* e Streaming
+### 2.4. Algoritmo A\* e Streaming
 
 O motor otimizador oferece dois modos de execucao:
 
-- **A* Global**: Espaco completo de estados. Limitado a N <= 8 (complexidade O(N!)).
-- **A* Particionado (Sliding Window)**: Complexidade reduzida para O(ceil(N/k) * k!),
+- **A\* Global**: Espaco completo de estados. Limitado a N <= 8 (complexidade O(N!)).
+- **A\* Particionado (Sliding Window)**: Complexidade reduzida para O(ceil(N/k) \* k!),
   com k = 8.
 
 O metodo `otimizar_fila_streaming()` e um **generator Python** que faz `yield` de um
@@ -137,12 +151,12 @@ generator para atualizar os cards e graficos frame a frame com `st.empty()`.
 
 ## 3. KPIs de Business Intelligence (v2.0)
 
-| KPI | Descricao |
-|-----|-----------|
-| Tempo de Execucao | Wall-clock do pipeline completo (ms) |
-| Nos Explorados (A*) | Soma das expansoes do heap em todos os lotes |
-| Espera Media — FIFO | Tempo medio de espera acumulado por paciente no FIFO |
-| Espera Media — A* | Tempo medio de espera acumulado por paciente no A* |
+| KPI                  | Descricao                                            |
+| -------------------- | ---------------------------------------------------- |
+| Tempo de Execucao    | Wall-clock do pipeline completo (ms)                 |
+| Nos Explorados (A\*) | Soma das expansoes do heap em todos os lotes         |
+| Espera Media — FIFO  | Tempo medio de espera acumulado por paciente no FIFO |
+| Espera Media — A\*   | Tempo medio de espera acumulado por paciente no A\*  |
 
 ---
 
@@ -172,16 +186,16 @@ make check-all  # lint + tipos + testes
 
 ### Cobertura de Testes
 
-| Modulo | Cobertura |
-|--------|-----------|
-| `test_a_star.py` | Heuristica, heapq, nos explorados |
-| `test_bayesian_net.py` | Inferencia, cache, estados |
-| `test_generator.py` | Geracao de dados sinteticos |
-| `test_paciente.py` | Validacao Pydantic, imutabilidade |
-| `test_simulator.py` | Pipeline completo, comparativo |
-| `test_runner_kpis.py` | KPIs de BI (tempo, nos, espera) |
-| `test_manchester.py` | Mapeamento de cores e categorias |
-| `test_utils.py` | Formatacao de DataFrames |
+| Modulo                 | Cobertura                         |
+| ---------------------- | --------------------------------- |
+| `test_a_star.py`       | Heuristica, heapq, nos explorados |
+| `test_bayesian_net.py` | Inferencia, cache, estados        |
+| `test_generator.py`    | Geracao de dados sinteticos       |
+| `test_paciente.py`     | Validacao Pydantic, imutabilidade |
+| `test_simulator.py`    | Pipeline completo, comparativo    |
+| `test_runner_kpis.py`  | KPIs de BI (tempo, nos, espera)   |
+| `test_manchester.py`   | Mapeamento de cores e categorias  |
+| `test_utils.py`        | Formatacao de DataFrames          |
 
 ---
 
@@ -217,6 +231,6 @@ sistema-triagem-ia/
 
 ---
 
-*Desenvolvido por Hugo Mendes — [GitHub](https://github.com/fhugomp) |
+_Desenvolvido por Hugo Mendes — [GitHub](https://github.com/fhugomp) |
 [LinkedIn](https://linkedin.com/in/fhugomp) |
-[Portfolio](https://fhugomp.github.io)*
+[Portfolio](https://fhugomp.github.io)_
